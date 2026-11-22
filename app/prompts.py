@@ -1,85 +1,158 @@
-EXTRACT_CANDIDATE_DETAILS = """
-You are an expert in resume screening. Your task is to extract relevant details from a resume.
-You will receive a resume in text format, and you need to identify key information such as:
-- name (string)
-- email (string)
-- phone (string)
-- education (string or null)
-- work_experience (integer or null)
-- skills (list of strings)
-- certifications (list of strings)
+"""Промпты для LLM-агентов проверки анкеты кандидата."""
 
-Your response must be a valid JSON object.
-Use `null` if a value is missing.
+CONTRADICTION_ANALYSIS = """
+Ты — старший эксперт по проверке анкет кандидатов (HR-комплаенс).
 
-Here is the resume text:
-{resume_text}
+Ниже приведена анкета кандидата. Твоя задача — найти ВНУТРЕННИЕ ПРОТИВОРЕЧИЯ
+в данных анкеты, то есть случаи, когда одни сведения анкеты не согласуются
+с другими, а также оценить кадровые риски в истории трудоустройства.
 
-Expected response format:
+Что считается противоречием:
+- даты в разных разделах несовместимы (например, опыт начинается раньше
+  окончания школы, обучение пересекается с невозможным возрастом);
+- указанная должность/подразделение не соответствует содержанию опыта работы;
+- уровень должности не соответствует длительности и содержанию опыта
+  (например, «руководитель отдела» при стаже несколько месяцев);
+- сфера деятельности организации противоречит заявленной должности;
+- контактные данные или персональные сведения выглядят несогласованными.
+
+Также обрати внимание на орфографические ошибки, если он присутствуют в большом количестве.
+
+Дополнительно проанализируй историю трудоустройства (раздел experience[]).
+
+1. Причины увольнения (поле reason в каждой записи):
+   - причина не указана или указана формально («по собственному желанию»,
+     «по соглашению сторон») при частой смене мест работы;
+   - одна и та же причина повторяется у нескольких мест работы;
+   - причина противоречит данным анкеты (например, «сокращение штата»,
+     хотя кандидат сразу перешёл в такую же должность в похожую организацию);
+   - причина не согласуется с длительностью работы (увольнение через
+     1–2 месяца без объяснения);
+   - в поле reason указано не причину увольнения, а обязанности,
+     достижения или иной текст.
+
+2. Короткие периоды работы (job hopping):
+   - рассчитай длительность каждого завершённого периода
+     beginDate → endDate в месяцах;
+   - коротким считай период менее 6 месяцев, критично коротким — менее
+     3 месяцев - это как правило испытательный срок;
+   - отдельно отмечай повторяющиеся короткие периоды: два и более места
+     работы короче 12 месяцев, особенно идущие подряд;
+   - учитывай контекст: стажировка, сезонная работа или проект могут
+     объяснять короткий период, но требуют уточнения;
+   - если endDate отсутствует, длительность периода посчитать нельзя —
+     не делай выводов о ней;
+   - текущее место работы (currentJob=true) - длительность считается до текущей даты.
+
+3. Долгие перерывы между местами работы:
+   - сравни endDate предыдущей записи с beginDate следующей;
+   - перерывом считай разрыв более 3 месяцев, критичным — более 6 месяцев;
+   - отмечай перерывы, которые не объяснены обучением, декретом или иными
+     сведениями из анкеты;
+   - если в период перерыва кандидат учился по разделу education[],
+     перерыв считается объяснённым;
+   - проверь также разрыв между последним местом работы и текущей датой
+     (statusDate или сегодняшний день), если кандидат не трудоустроен.
+
+4. Наличие собственного бизнеса:
+   - ищи в organizations[] и в experience[] наличие собственного бизнеса: должности «ИП»,
+     «индивидуальный предприниматель», «учредитель», «владелец»,
+     «собственник», «генеральный директор» в собственной компании,
+     самозанятость;
+   - отмечай риски и конфликт интересов: действующий бизнес при
+     трудоустройстве по найму, параллельное ведение бизнеса в период работы
+     в другой организации, бизнес в той же сфере, что и целевая должность;
+   - отмечай противоречия: бизнес виден в experience[], но не отражён
+     в organizations[], или наоборот;
+   - если собственный бизнес есть, но его роль и период не раскрыты,
+     укажи это как риск, требующий уточнения.
+
+Уже найденные формальные замечания (не повторяй их, ищи только то, чего в
+этом списке нет):
+{rule_findings}
+
+Текстовая сводка анкеты:
+{candidate_summary}
+
+Исходная анкета в JSON:
+{candidate_json}
+
+Правила:
+1. Не выдумывай факты, которых нет в анкете. Каждое противоречие или риск
+   должно опираться на конкретные поля и, где возможно, на конкретные даты.
+2. Если противоречий и рисков нет — верни пустой список.
+3. severity: "high" — данные невозможно использовать без проверки,
+   "medium" — требует уточнения у кандидата, "low" — незначительная
+   несогласованность или слабый риск.
+4. Поле fields содержит имена полей анкеты (в camelCase), к которым относится
+   находка. Для рисков истории трудоустройства указывай "experience",
+   "experience[i].reason", "experience[i].endDate", "organizations" и т.п.
+5. Для рисков истории трудоустройства используй severity так:
+   "high" — скрытый собственный бизнес или конфликт интересов,
+   систематические короткие периоды (три и более места короче 12 месяцев);
+   "medium" — одиночный короткий период, необъяснённый перерыв более
+   6 месяцев, пустые или противоречивые причины увольнения;
+   "low" — единичная формальная причина увольнения, перерыв 6–12 месяцев,
+   который частично объяснён.
+6. Не дублируй одну и ту же проблему в нескольких находках: повторяющиеся
+   короткие периоды и перерывы объединяй в одну запись с перечислением
+   затронутых мест работы.
+7. Для новых категорий используй коды "dismissal_reason", "short_tenure",
+   "employment_gap", "own_business" (при необходимости с уточнением).
+
+Верни строго JSON:
 {{
-  "name": "John Doe",
-  "email": "abc@gmail.com",
-  "phone": "1234567890",
-  "education": "Bachelor of Science in Computer Science",
-  "work_experience": 7,
-  "skills": ["Python", "FastAPI", "Machine Learning"],
-  "certifications": ["Certified Python Developer"]
+  "contradictions": [
+    {{
+      "severity": "high|medium|low",
+      "code": "короткий_код_латиницей",
+      "title": "краткая формулировка",
+      "description": "в чём именно противоречие или риск и на каких полях основано",
+      "fields": ["поле1", "поле2"]
+    }}
+  ],
+  "summary": "краткий итог проверки одной-двумя фразами"
 }}
 """
 
 
-EXTRACT_JD_DETAILS = """
-You are an expert in filtering the required skills and experience from a given job description. Your task is to extract relevant details from a resume.
-You will receive the job description in text format, and you need to identify key information such as:
-- min_work_experience in years (integer or null)
-- max_work_experience in years (integer or null)
-- skills (list of strings)
+FIT_EVALUATION = """
+Ты — эксперт по подбору персонала. Оцени, соответствует ли опыт и профиль
+кандидата целевой должности.
 
-Your response must be a valid JSON object.
-Use `null` if a value is missing.
-If experience is not avaialble as a range, for example, "5+ years", consider it as 5 for min_work_experience and 8 for max_work_experience (assuming +3 years as the maximum).
+Текстовая сводка анкеты:
+{candidate_summary}
 
-Here is the job description text:
-{jd_text}
+Как оценивать:
+- Ориентируйся только на целевую должность и название подразделения из
+  анкеты. Отдельного описания вакансии нет.
+- Сопоставляй содержание опыта (организации, должности, сферы деятельности),
+  образование и общий стаж с целевой должностью и подразделением.
+- Учитывай переносимые навыки: близкие по смыслу обязанности и отрасли
+  считаются частичным соответствием.
+- Не придумывай требования, которых нет в названии должности и подразделении.
+- Так как требования вакансии не описаны, уверенность не может быть выше
+  "medium".
 
-Expected response format:
+Шкала verdict:
+- "suitable" — опыт и профиль соответствуют должности;
+- "partially_suitable" — есть существенная часть соответствия, но заметны
+  пробелы;
+- "not_suitable" — опыт не соответствует должности.
+
+score — целое число от 0 до 100, общая оценка соответствия.
+
+Верни строго JSON:
 {{
-  "min_work_experience": 7,
-  "max_work_experience": 10,
-  "skills": ["Python", "FastAPI", "Machine Learning"]
+  "verdict": "suitable|partially_suitable|not_suitable",
+  "score": 0,
+  "summary": "обоснование в 2–4 предложениях",
+  "strengths": ["сильная сторона"],
+  "gaps": ["пробел или риск"],
+  "matched_requirements": ["требование, которое подтверждено опытом"],
+  "unmatched_requirements": ["требование, которое не подтверждено"],
+  "relevant_experience_years": null,
+  "required_experience_years": null,
+  "confidence": "high|medium|low"
 }}
-"""
-
-
-CANDIDATE_EVALUATION = """
-You are a candidate evaluation agent.
-
-You will receive:
-1. A candidate's extracted profile (JSON)
-2. A job description (JSON)
-
-Evaluate if the candidate is a good fit based on:
-- Whether at least 50% of the required skills are present
-- Whether the work experience is within the acceptable range. This should be between the min_work_experience and max_work_experience from the job description with a tolerance of +/- 2 years. Anyhing outside this range should be considered a mismatch and the candidate should be rejected.
-
-Only If both the above conditions are met, return "Selected". Even if one of the conditions is not met, return "Rejected" in the candidate_status field.
-
-While matching skills, consider the following:
-    - If the skills are related to the job description. For example, if the job description requires CI/CD and the candidate has DevOps experience, consider it a match.
-
-Return your decision in the following json format:
-
-{{
-  "candidate_status": "Selected" or "Rejected",
-  "reason": "Explain the decision in detail with clarity in minimum of two or three sentences. Focus on the skills of the candidate and the experiences.",
-  "matched_skills": [...],
-  "skill_match_percentage": 68,
-  "experience": 5
-}}
-
-Here is the candidate profile:
-{resume_json}
-
-Here is the job description:
-{jd_json}
 """

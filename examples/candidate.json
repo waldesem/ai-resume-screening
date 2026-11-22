@@ -1,0 +1,63 @@
+{
+  "positionName": "Ведущий аналитик данных",
+  "department": "Департамент аналитики",
+  "statusDate": "2026-11-20",
+  "lastName": "Иванов",
+  "firstName": "Пётр",
+  "hasNameChanged": false,
+  "birthday": "1993-05-17",
+  "birthplace": "г. Казань",
+  "citizen": "Российская Федерация",
+  "hasAdditionalCitizenship": false,
+  "maritalStatus": "Женат",
+  "regAddress": "г. Казань, ул. Баумана, д. 10, кв. 5",
+  "validAddress": "г. Москва, ул. Тверская, д. 1, кв. 2",
+  "contactPhone": "+7 916 123-45-67",
+  "email": "petr.ivanov@example.com",
+  "hasInn": true,
+  "inn": "165012345678",
+  "hasSnils": true,
+  "snils": "123-456-789 01",
+  "passportSerial": "4509",
+  "passportNumber": "123456",
+  "passportIssueDate": "2013-06-20",
+  "passportIssuedBy": "ОВД Кировского района г. Казани",
+  "education": [
+    {
+      "educationType": "Высшее, бакалавриат",
+      "institutionName": "Казанский федеральный университет",
+      "beginYear": 2011,
+      "endYear": 2015,
+      "specialty": "Прикладная информатика"
+    },
+    {
+      "educationType": "Высшее, магистратура",
+      "institutionName": "Казанский федеральный университет",
+      "beginYear": 2015,
+      "endYear": 2017,
+      "specialty": "Анализ данных"
+    }
+  ],
+  "hasJob": true,
+  "experience": [
+    {
+      "beginDate": "2014-09-01",
+      "endDate": "2017-02-01",
+      "currentJob": false,
+      "name": "ООО «Ромашка»",
+      "address": "г. Казань",
+      "activityType": "Розничная торговля",
+      "position": "Стажёр-аналитик",
+      "possibilityContactEmployer": true
+    },
+    {
+      "beginDate": "2017-03-01",
+      "currentJob": true,
+      "name": "АО «Данные»",
+      "address": "г. Москва",
+      "activityType": "Разработка программного обеспечения",
+      "position": "Ведущий аналитик данных",
+      "possibilityContactEmployer": true
+    }
+  ]
+}

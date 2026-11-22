@@ -1,203 +1,309 @@
-# 🤖 Agentic Resume Screening App
+# AI Resume Screening
 
-An AI-powered resume screening application built with a **multi-agent architecture**,
-using a **free, open-source local LLM (Llama 3.2 via Ollama)** — no paid API keys required.
+Сервис проверки анкеты кандидата. На вход принимается **анкета в формате JSON**
+(схема заказчика), на выходе формируется структурированный отчёт:
 
-Upload a candidate's resume (PDF) and a job description, and get an instant intelligent
-evaluation — including candidate status, detailed feedback, and a skills match score.
-Screen multiple candidates in one session and export all results as CSV.
+1. **Внутренние противоречия анкеты** — несогласованные даты, возраст и стаж,
+   флаги документов, пересечения периодов обучения, несоответствие заявленной
+   должности содержанию опыта.
+2. **Соответствие опыта целевой должности** — насколько карьерный трек, опыт и
+   образование кандидата отвечают целевой должности и подразделению из анкеты.
+3. **Итоговая рекомендация** — можно ли передавать кандидата нанимающему
+   менеджеру или требуется ручная проверка.
 
----
-
-## 📸 Demo
-
-**Candidate matching the job description — Selected:**
-
-![Selected candidate result](demo/selected-candidate/result.png)
-
-**Candidate not matching the job description — Rejected:**
-
-![Rejected candidate result](demo/rejected-candidate/result.png)
-
-**Screening history with multiple candidates tracked in one session:**
-
-![Screening history](demo/screening-history.png)
-
-**Export results to CSV for sharing with hiring teams:**
-
-![CSV export](demo/csv-export.png)
-
-**Full app UI:**
-
-![App UI](demo/resume-screening-app-ui.png)
-
-> Same job description, two different candidates — the app correctly distinguishes a
-> strong match (68% skills matched, Selected) from a weak match (0%, Rejected due to
-> missing work experience), proving the evaluation is genuinely reasoning over the
-> content rather than returning a fixed result.
+Проверка противоречий гибридная: объективные несоответствия ищутся
+детерминированными правилами, смысловые — локальной LLM через
+[Ollama](https://ollama.com).
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Архитектура
 
 ```
-Browser (Streamlit UI :8501)
-        │
+Vue 3 + Vite UI (:5173 в dev, :8000 после сборки)
+        │  POST JSON { candidate }
         ▼
-FastAPI Backend (:8000)
+FastAPI backend (:8000)
         │
-        ├── resume_extractor_agent   → Extracts candidate details from PDF
-        ├── jd_extractor_agent       → Parses job description requirements
-        └── candidate_evaluation_agent → Scores and evaluates fit
+        ├── app/checks.py                  → формальные проверки (без LLM)
+        ├── contradiction_agent            → смысловые противоречия (LLM)
+        └── fit_agent                      → соответствие должности (LLM)
                 │
                 ▼
-        Ollama (local LLM :11434)
-        Model: llama3.2 (free, offline, no API key)
+        Ollama (локальная LLM :11434)
 ```
+
+Фронтенд — отдельное SPA на Vue 3 + TypeScript + Vite. В режиме разработки
+Vite проксирует запросы `/screening` и `/health` на FastAPI. Собранное
+приложение (`frontend/dist`) FastAPI автоматически раздаёт на `/`, поэтому для
+production достаточно одного backend-процесса.
+
+### 🔒 Работа без интернета
+
+Интерфейс не загружает ресурсы из внешних сетей:
+
+- шрифты — только системные (`system-ui`, `Segoe UI`, `Noto Sans`, …), без
+  Google Fonts и `@font-face` с удалёнными файлами;
+- иконки — inline SVG в [`AppIcon.vue`](frontend/src/components/AppIcon.vue),
+  без иконочных шрифтов и CDN;
+- favicon — локальный [`frontend/public/favicon.svg`](frontend/public/favicon.svg);
+- Vue и остальные зависимости собираются Vite в локальный бандл;
+- Swagger UI и ReDoc (`/docs`, `/redoc`) по умолчанию отключены, потому что
+  FastAPI подгружает их с CDN. Схема API остаётся локально доступной по
+  `/openapi.json`; включить документацию можно через `ENABLE_API_DOCS=1`
+  (потребуется доступ к CDN или собственные ассеты Swagger UI).
+
+Во время работы браузер обращается только к backend (по умолчанию тот же
+origin или localhost), а backend — к локальной Ollama. Для сборки нужны
+заранее установленные npm/Bun-зависимости: `npm install`/`bun install`
+требует доступа к registry, поэтому зависимости ставятся до изоляции контура
+либо из локального кэша/зеркала.
 
 ---
 
-## 🛠️ Tech Stack
+## 📥 Входные данные
 
-| Layer | Technology |
-|---|---|
-| Frontend UI | Streamlit |
-| Backend API | FastAPI + Uvicorn |
-| AI / LLM | Ollama (llama3.2) — local, free, no API key |
-| PDF Parsing | PyPDF2 |
-| Data Export | pandas (CSV) |
-| Language | Python 3.10+ |
+Особенности приёма:
 
----
+- имена полей принимаются как в `camelCase` (как в схеме), так и в `snake_case`;
+- лишние поля не отбрасываются;
+- пустые строки и `null` в необязательных полях допустимы;
+- даты понимаются в форматах `ГГГГ-ММ-ДД`, `ДД.ММ.ГГГГ`, `ГГГГ-ММ`, `ГГГГ`.
 
-## ✨ Features
+В интерфейсе анкету можно загрузить файлом (UTF-8 или Windows-1251) либо
+вставить текстом. Если в JSON есть обёртка `{"candidate": {...}}`, она
+разворачивается автоматически.
 
-- 📄 Upload any PDF resume + paste any job description for instant AI evaluation
-- 🧠 Multi-agent pipeline: separate agents for resume extraction, JD parsing, and evaluation
-- 🆓 Fully free — runs on a local LLM via Ollama, zero API costs
-- 🔒 Private — resume data never leaves your machine, works fully offline
-- 📊 Returns candidate status (Selected/Rejected), feedback summary, and skills match %
-- 📈 Screening history table tracks every candidate processed in a session
-- ⬇️ One-click CSV export of all screening results
+Соответствие должности оценивается только по названию должности
+(`positionName`) и подразделению (`department`) из анкеты.
 
 ---
 
-## 🚀 Getting Started
+## 📤 Отчёт
 
-### Prerequisites
-
-- Python 3.10+
-- [Ollama](https://ollama.com) installed
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Sudharshika/agentic-resume-screening.git
-cd agentic-resume-screening
+```json
+{
+  "generated_at": "2026-11-22T13:00:00",
+  "model": "llama3.2",
+  "candidate": {
+    "full_name": "Иванов Пётр",
+    "position_name": "Ведущий аналитик данных",
+    "department": "Департамент аналитики",
+    "age": 33,
+    "career_start": "2014-09-01",
+    "career_span_years": 12.2,
+    "has_job": true,
+    "education_count": 2,
+    "experience_count": 2
+  },
+  "contradictions": {
+    "has_contradictions": true,
+    "counts": { "high": 1, "medium": 2, "low": 0 },
+    "items": [
+      {
+        "severity": "high",
+        "code": "experience_0_too_early",
+        "title": "Работа началась в слишком раннем возрасте",
+        "description": "…",
+        "fields": ["experience[0].beginDate", "birthday"],
+        "source": "rule"
+      }
+    ],
+    "summary": "…"
+  },
+  "fit": {
+    "verdict": "partially_suitable",
+    "score": 72,
+    "summary": "…",
+    "strengths": ["…"],
+    "gaps": ["…"],
+    "matched_requirements": ["…"],
+    "unmatched_requirements": ["…"],
+    "relevant_experience_years": 12.2,
+    "required_experience_years": 3.0,
+    "confidence": "high"
+  },
+  "recommendation": "…",
+  "analysis_errors": []
+}
 ```
 
-### 2. Install dependencies
+- `contradictions.items[].source` — `rule` (детерминированная проверка) или
+  `llm` (смысловое противоречие).
+- `fit.verdict` — `suitable`, `partially_suitable`, `not_suitable` или
+  `unknown`, если LLM недоступна.
+- `analysis_errors` — сбои LLM-этапов; отчёт при этом всё равно возвращается
+  с результатами формальных проверок.
+
+Интерфейс показывает отчёт по секциям, позволяет скачать полный JSON, а также
+ведёт историю проверок в `localStorage` с экспортом в CSV.
+
+---
+
+## 🚀 Запуск
+
+### Требования
+
+- Python 3.14+
+- [uv](https://docs.astral.sh/uv/)
+- [Node.js](https://nodejs.org/) 20+ (или [Bun](https://bun.sh/))
+- [Ollama](https://ollama.com)
+
+### 1. Установка Python-зависимостей
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
-### 3. Pull the LLM model (one-time, ~2GB download)
+### 2. Загрузка и запуск модели
 
 ```bash
-ollama pull llama3.2
-```
-
-### 4. Run the app (3 terminals needed)
-
-**Terminal 1 — Start Ollama:**
-```bash
+ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M
 ollama serve
 ```
 
-**Terminal 2 — Start FastAPI backend:**
+### 3. Запуск backend
+
 ```bash
-python -m uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
-**Terminal 3 — Start Streamlit frontend:**
+Backend доступен на **http://localhost:8000**.
+
+### 4. Запуск фронтенда в режиме разработки
+
+Через Bun:
+
 ```bash
-python -m streamlit run app/ui/streamlit.py
+cd frontend
+bun install
+bun run dev
 ```
 
-### 5. Open in browser
+Откройте **http://localhost:5173**. Vite проксирует `/screening` и `/health`
+на backend, поэтому CORS для dev-режима не требуется.
 
-Go to **http://localhost:8501**, upload a PDF resume, paste a job description, and
-click **Process Resume**.
+### 5. Production-сборка
 
----
-
-## 📁 Project Structure
-
-```
-agentic-resume-screening/
-├── app/
-│   ├── agents/
-│   │   ├── candidate_evaluation_agent.py  # Evaluates resume vs JD
-│   │   ├── jd_extractor_agent.py          # Extracts JD requirements
-│   │   └── resume_extractor_agent.py      # Extracts resume details
-│   ├── ui/
-│   │   └── streamlit.py                   # Streamlit frontend
-│   ├── main.py                            # FastAPI app entry point
-│   ├── parsepdf.py                        # PDF text extraction
-│   └── prompts.py                         # LLM prompt templates
-├── demo/
-│   ├── selected-candidate/                # Screenshots: strong-match example
-│   ├── rejected-candidate/                # Screenshots: weak-match example
-│   ├── screening-history.png
-│   ├── csv-export.png
-│   └── resume-screening-app-ui.png
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
----
-
-## 💡 How It Works
-
-1. **Upload** — User uploads a PDF resume and pastes a job description via the Streamlit UI
-2. **Extract** — `resume_extractor_agent` uses the local LLM to parse the resume into structured data (name, skills, experience, education)
-3. **Parse JD** — `jd_extractor_agent` extracts requirements from the job description text
-4. **Evaluate** — `candidate_evaluation_agent` compares both and returns a score, status, and feedback
-5. **Track & Export** — Results accumulate in a session history table, downloadable as CSV
-
----
-
-## 🔧 Configuration
-
-To switch to a different Ollama model, change `OLLAMA_MODEL` in each agent file
-(`app/agents/*.py`):
-
-```python
-OLLAMA_MODEL = "llama3.2"   # default — used in this version
-# OLLAMA_MODEL = "qwen3:4b"  # better quality, recommended for 16GB+ RAM
-# OLLAMA_MODEL = "mistral"   # alternative
+```bash
+cd frontend
+npm run build
 ```
 
-Pull the model first if switching: `ollama pull qwen3:4b`
+После сборки FastAPI при следующем старте увидит `frontend/dist` и начнёт
+раздавать интерфейс на **http://localhost:8000**:
 
-For more consistent, reproducible evaluations, temperature is set to `0` in all
-agent files (greedy decoding).
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Swap to Qwen3:4b for improved evaluation quality
-- [ ] Support batch resume upload and ranking
-- [ ] Add Docker support for one-command setup
-- [ ] Deploy a hosted demo (Streamlit Cloud + free Gemini API fallback)
+```bash
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
 ---
 
-## 🙏 Acknowledgements
+## 🔌 API
 
-- [Ollama](https://ollama.com) — local LLM inference
-- [Streamlit](https://streamlit.io) — UI framework
-- [FastAPI](https://fastapi.tiangolo.com) — backend API
-- [Meta Llama 3.2](https://ollama.com/library/llama3.2) — open-source LLM
+### `POST /screening/`
+
+```bash
+curl -X POST http://localhost:8000/screening/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "candidate": { "...": "анкета по схеме" }
+  }'
+```
+
+### `GET /health`
+
+```bash
+curl http://localhost:8000/health
+```
+
+---
+
+## 🧩 Что проверяют формальные правила
+
+- обязательные поля (ФИО, должность, подразделение, дата рождения);
+- возраст и правдоподобность дат (рождение, статус, паспорт, обучение, работа);
+- согласованность флагов `hasJob` / `currentJob`, `hasInn` / `inn`,
+  `hasSnils` / `snils`, `hasAdditionalCitizenship` / `citizen`;
+- корректность ИНН (10/12 цифр) и СНИЛС (11 цифр);
+- формат e-mail и телефона;
+- хронологию обучения: обратный порядок лет, будущие даты, слишком раннее
+  начало, пересечение периодов;
+- хронологию опыта: будущие даты начала, работу до 14 лет, стаж больше
+  возможного для возраста.
+
+Смысловые противоречия (несоответствие должности содержанию опыта, сферы
+деятельности, уровня ответственности) ищет LLM-агент.
+
+---
+
+## ⚙️ Конфигурация
+
+### Backend
+
+| Переменная | Назначение | По умолчанию |
+|---|---|---|
+| `OLLAMA_MODEL` | модель Ollama | `llama3.2` |
+| `CORS_ORIGINS` | дополнительные origin для браузера (через запятую) | `http://localhost:5173,http://127.0.0.1:5173` |
+| `ENABLE_API_DOCS` | включает `/docs` и `/redoc` (загружают Swagger UI/ReDoc с CDN) | `0` |
+
+Дополнительно backend принимает любые `http://localhost:*` и
+`http://127.0.0.1:*` origin.
+
+### Frontend
+
+Переменные задаются в `frontend/.env` (шаблон — `frontend/.env.example`).
+
+| Переменная | Назначение | По умолчанию |
+|---|---|---|
+| `VITE_API_BASE_URL` | прямой адрес backend; пусто — same-origin / Vite proxy | пусто |
+| `VITE_BACKEND_PROXY` | куда Vite проксирует `/screening` и `/health` | `http://localhost:8000` |
+
+---
+
+## 📁 Структура проекта
+
+```
+app/
+├── agents/
+│   ├── contradiction_agent.py  # смысловые противоречия (LLM)
+│   ├── fit_agent.py            # соответствие должности (LLM)
+│   └── screening_agent.py      # оркестратор отчёта
+├── checks.py                   # формальные проверки анкеты
+├── llm.py                      # обёртка Ollama
+├── main.py                     # FastAPI + раздача frontend/dist
+├── prompts.py                  # промпты
+├── schemas.py                  # Pydantic-модели анкеты
+└── utils.py                    # даты, стаж, сводка для LLM
+
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── AppIcon.vue         # inline SVG-иконки
+│   │   ├── ScreeningForm.vue   # загрузка анкеты
+│   │   ├── ReportView.vue      # отчёт целиком
+│   │   ├── ContradictionsPanel.vue
+│   │   ├── FitPanel.vue
+│   │   └── HistoryPanel.vue
+│   ├── composables/useHistory.ts
+│   ├── utils/                  # парсинг JSON, формат, экспорт
+│   ├── api.ts                  # клиент FastAPI
+│   ├── types.ts
+│   ├── App.vue
+│   └── main.ts
+├── index.html
+├── package.json
+├── public/
+│   └── favicon.svg             # локальная иконка вкладки
+├── tsconfig.json
+└── vite.config.ts
+
+examples/
+├── candidate.json              # корректная анкета
+└── candidate_with_contradictions.json
+```
+## Screenshot
+
+![Screenshot](screenshots/screenshot-1.png)
+![Screenshot](screenshots/screenshot-2.png)
+![Screenshot](screenshots/screenshot-3.png)

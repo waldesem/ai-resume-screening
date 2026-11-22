@@ -1,56 +1,108 @@
-"""
-FastAPI backend for the Agentic Resume Screening App.
+"""FastAPI-бэкенд проверки анкет кандидатов.
 
-Endpoints:
-  POST /screening/  — accepts a resume PDF + job description text,
-                      runs 3 AI agents, returns evaluation as JSON.
+Endpoint:
+  POST /screening/ — принимает анкету кандидата в формате JSON и возвращает
+                    отчёт о внутренних противоречиях и соответствии должности.
+
+Если рядом с backend собран Vue-фронтенд (``frontend/dist``), FastAPI
+раздаёт его как статику на ``/``. В режиме разработки интерфейс запускается
+отдельным Vite-сервером, а запросы к API проксируются на этот backend.
 """
 
-from fastapi import FastAPI, UploadFile, Form
+import logging
+import os
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.parsepdf import parse_pdf
-from app.agents.resume_extractor_agent import analyze_resume
-from app.agents.jd_extractor_agent import analyze_jd
-from app.agents.candidate_evaluation_agent import evaluate_candidate
-import json
+from fastapi.staticfiles import StaticFiles
 
-app = FastAPI()
+from app.agents.screening_agent import screen_candidate
+from app.schemas import ScreeningRequest
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Swagger UI и ReDoc по умолчанию подгружают JS/CSS с CDN, поэтому в
+# офлайн-контуре они отключены. Включаются явно через ENABLE_API_DOCS=1.
+_docs_enabled = os.getenv("ENABLE_API_DOCS", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+app = FastAPI(
+    title="AI Resume Screening",
+    description=(
+        "Проверка анкеты кандидата: внутренние противоречия и соответствие "
+        "опыта целевой должности."
+    ),
+    version="2.0.0",
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+)
+
+_DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    """Проверка доступности backend."""
+    return {"status": "ok"}
 
 
 @app.post("/screening/")
-async def upload_resume(resume: UploadFile, jd_text: str = Form(...)):
+def screen(payload: ScreeningRequest) -> JSONResponse:
+    """Проверяет анкету кандидата и возвращает структурированный отчёт.
+
+    Тело запроса::
+
+        {
+          "candidate": { ... анкета по схеме ... }
+        }
+
+    Соответствие должности оценивается по ``positionName`` и ``department``.
     """
-    Endpoint to screen a resume against a job description.
+    logger.info(
+        "Получена анкета: %s (должность: %s)",
+        payload.candidate.full_name or "без имени",
+        payload.candidate.position_name or "не указана",
+    )
+    report = screen_candidate(payload.candidate)
+    return JSONResponse(content=report)
 
-    Parameters:
-        resume   — uploaded PDF file
-        jd_text  — job description pasted as plain text from the UI
-    """
-    print("Received resume file:", resume.filename)
-    print("Job description length:", len(jd_text), "characters")
 
-    # Step 1: Extract text from uploaded resume PDF
-    resume_text = parse_pdf(resume.file)
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
-    # Step 2: Use AI agent to extract structured candidate details
-    candidate_details = analyze_resume(resume_text)
+if _FRONTEND_DIST.is_dir():
+    app.mount(
+        "/",
+        StaticFiles(directory=_FRONTEND_DIST, html=True),
+        name="frontend",
+    )
+else:
 
-    # Step 3: Use AI agent to extract structured JD requirements
-    # (jd_text comes directly from the Streamlit UI text area now —
-    #  no more hardcoded PDF file needed)
-    jd_details = analyze_jd(jd_text)
-
-    # Step 4: Evaluate candidate against JD
-    evaluation = evaluate_candidate(candidate_details, jd_details)
-    print("Evaluation result:", evaluation)
-
-    # Step 5: Safely parse and return JSON
-    if isinstance(evaluation, str):
-        try:
-            result_json = json.loads(evaluation)
-        except json.JSONDecodeError:
-            result_json = {"error": "Invalid JSON format in evaluation output"}
-    else:
-        result_json = evaluation
-
-    return JSONResponse(content=result_json)
+    @app.get("/", include_in_schema=False)
+    def frontend_not_built() -> dict[str, str]:
+        """Подсказка, если собранный фронтенд ещё отсутствует."""
+        return {
+            "message": (
+                "Frontend не собран. Выполните `npm run build` в каталоге "
+                "frontend или запустите Vite dev-сервер."
+            )
+        }
