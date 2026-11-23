@@ -38,27 +38,6 @@ Vite проксирует запросы `/screening` и `/health` на FastAPI.
 приложение (`frontend/dist`) FastAPI автоматически раздаёт на `/`, поэтому для
 production достаточно одного backend-процесса.
 
-### 🔒 Работа без интернета
-
-Интерфейс не загружает ресурсы из внешних сетей:
-
-- шрифты — только системные (`system-ui`, `Segoe UI`, `Noto Sans`, …), без
-  Google Fonts и `@font-face` с удалёнными файлами;
-- иконки — inline SVG в [`AppIcon.vue`](frontend/src/components/AppIcon.vue),
-  без иконочных шрифтов и CDN;
-- favicon — локальный [`frontend/public/favicon.svg`](frontend/public/favicon.svg);
-- Vue и остальные зависимости собираются Vite в локальный бандл;
-- Swagger UI и ReDoc (`/docs`, `/redoc`) по умолчанию отключены, потому что
-  FastAPI подгружает их с CDN. Схема API остаётся локально доступной по
-  `/openapi.json`; включить документацию можно через `ENABLE_API_DOCS=1`
-  (потребуется доступ к CDN или собственные ассеты Swagger UI).
-
-Во время работы браузер обращается только к backend (по умолчанию тот же
-origin или localhost), а backend — к локальной Ollama. Для сборки нужны
-заранее установленные npm/Bun-зависимости: `npm install`/`bun install`
-требует доступа к registry, поэтому зависимости ставятся до изоляции контура
-либо из локального кэша/зеркала.
-
 ---
 
 ## 📥 Входные данные
@@ -84,7 +63,7 @@ origin или localhost), а backend — к локальной Ollama. Для с
 ```json
 {
   "generated_at": "2026-11-22T13:00:00",
-  "model": "llama3.2",
+  "model": "Qwen3-8B-GGUF:Q4_K_M",
   "candidate": {
     "full_name": "Иванов Пётр",
     "position_name": "Ведущий аналитик данных",
@@ -146,31 +125,39 @@ origin или localhost), а backend — к локальной Ollama. Для с
 
 - Python 3.14+
 - [uv](https://docs.astral.sh/uv/)
-- [Node.js](https://nodejs.org/) 20+ (или [Bun](https://bun.sh/))
+- [Node.js](https://nodejs.org/) 22+ и [Bun](https://bun.sh/)
 - [Ollama](https://ollama.com)
 
-### 1. Установка Python-зависимостей
+### 1. Конируем репозиторий
+
+```bash
+git clone https://github.com/waldesem/ai-resume-screening.git
+cd ai-resume-screening
+```
+
+### 2. Установка Python-зависимостей
 
 ```bash
 uv sync
+source .venv/bin/activate # .venv/bin/Activate.ps1
 ```
 
-### 2. Загрузка и запуск модели
+### 3. Загрузка и запуск модели
 
 ```bash
 ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M
 ollama serve
 ```
 
-### 3. Запуск backend
+### 4. Запуск backend
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-Backend доступен на **http://localhost:8000**.
+Backend доступен на **<http://localhost:8000>**.
 
-### 4. Запуск фронтенда в режиме разработки
+### 5. Запуск фронтенда в режиме разработки
 
 Через Bun:
 
@@ -180,18 +167,18 @@ bun install
 bun run dev
 ```
 
-Откройте **http://localhost:5173**. Vite проксирует `/screening` и `/health`
+Откройте **<http://localhost:5173>**. Vite проксирует `/screening` и `/health`
 на backend, поэтому CORS для dev-режима не требуется.
 
-### 5. Production-сборка
+### 6. Production-сборка
 
 ```bash
 cd frontend
-npm run build
+bun run build
 ```
 
 После сборки FastAPI при следующем старте увидит `frontend/dist` и начнёт
-раздавать интерфейс на **http://localhost:8000**:
+раздавать интерфейс на **<http://localhost:8000>**:
 
 ```bash
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -223,8 +210,6 @@ curl http://localhost:8000/health
 
 - обязательные поля (ФИО, должность, подразделение, дата рождения);
 - возраст и правдоподобность дат (рождение, статус, паспорт, обучение, работа);
-- согласованность флагов `hasJob` / `currentJob`, `hasInn` / `inn`,
-  `hasSnils` / `snils`, `hasAdditionalCitizenship` / `citizen`;
 - корректность ИНН (10/12 цифр) и СНИЛС (11 цифр);
 - формат e-mail и телефона;
 - хронологию обучения: обратный порядок лет, будущие даты, слишком раннее
@@ -241,11 +226,11 @@ curl http://localhost:8000/health
 
 ### Backend
 
-| Переменная | Назначение | По умолчанию |
-|---|---|---|
-| `OLLAMA_MODEL` | модель Ollama | `llama3.2` |
-| `CORS_ORIGINS` | дополнительные origin для браузера (через запятую) | `http://localhost:5173,http://127.0.0.1:5173` |
-| `ENABLE_API_DOCS` | включает `/docs` и `/redoc` (загружают Swagger UI/ReDoc с CDN) | `0` |
+| Переменная        | Назначение                                                     | По умолчанию                                  |
+| ----------------- | -------------------------------------------------------------- | --------------------------------------------- |
+| `OLLAMA_MODEL`    | модель Ollama                                                  | `llama3.2`                                    |
+| `CORS_ORIGINS`    | дополнительные origin для браузера (через запятую)             | `http://localhost:5173,http://127.0.0.1:5173` |
+| `ENABLE_API_DOCS` | включает `/docs` и `/redoc` (загружают Swagger UI/ReDoc с CDN) | `0`                                           |
 
 Дополнительно backend принимает любые `http://localhost:*` и
 `http://127.0.0.1:*` origin.
@@ -254,10 +239,10 @@ curl http://localhost:8000/health
 
 Переменные задаются в `frontend/.env` (шаблон — `frontend/.env.example`).
 
-| Переменная | Назначение | По умолчанию |
-|---|---|---|
-| `VITE_API_BASE_URL` | прямой адрес backend; пусто — same-origin / Vite proxy | пусто |
-| `VITE_BACKEND_PROXY` | куда Vite проксирует `/screening` и `/health` | `http://localhost:8000` |
+| Переменная           | Назначение                                             | По умолчанию            |
+| -------------------- | ------------------------------------------------------ | ----------------------- |
+| `VITE_API_BASE_URL`  | прямой адрес backend; пусто — same-origin / Vite proxy | пусто                   |
+| `VITE_BACKEND_PROXY` | куда Vite проксирует `/screening` и `/health`          | `http://localhost:8000` |
 
 ---
 
@@ -302,6 +287,7 @@ examples/
 ├── candidate.json              # корректная анкета
 └── candidate_with_contradictions.json
 ```
+
 ## Screenshot
 
 ![Screenshot](screenshots/screenshot-1.png)
