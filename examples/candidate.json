@@ -1,14 +1,15 @@
 {
   "positionName": "Ведущий аналитик данных",
   "department": "Департамент аналитики",
-  "statusDate": "2026-11-20",
   "lastName": "Иванов",
   "firstName": "Пётр",
+  "midName": "Игоревич",
   "hasNameChanged": false,
   "birthday": "1993-05-17",
   "birthplace": "г. Казань",
   "citizen": "Российская Федерация",
   "hasAdditionalCitizenship": false,
+  "additionalCitizenship": "Молдова",
   "maritalStatus": "Женат",
   "regAddress": "г. Казань, ул. Баумана, д. 10, кв. 5",
   "validAddress": "г. Москва, ул. Тверская, д. 1, кв. 2",
@@ -48,7 +49,8 @@
       "address": "г. Казань",
       "activityType": "Розничная торговля",
       "position": "Стажёр-аналитик",
-      "possibilityContactEmployer": true
+      "possibilityContactEmployer": true,
+      "reason": "Устал работать на одном месте"
     },
     {
       "beginDate": "2017-03-01",
@@ -59,5 +61,10 @@
       "position": "Ведущий аналитик данных",
       "possibilityContactEmployer": true
     }
-  ]
+  ],
+  "organizations": [{
+    "inn":"165012345678",
+    "name":"АО «Данные»",
+    "activityType":"Розничная торговля"
+  }]
 }

@@ -64,7 +64,7 @@ class PrevNameEntry(BaseModel):
     patronymic: str | None = Field(default=None, alias="midNameBeforeChange")
     changed: str | None = Field(default=None)
     reason: str | None = None
-    
+
     @field_validator("surname", "firstname", "patronymic", mode="before")
     @classmethod
     def _validate_text(cls, value: Any) -> str:
@@ -85,9 +85,7 @@ class EducationEntry(_BaseModel):
     def _validate_year(cls, value: Any) -> int | None:
         return _as_int(value)
 
-    @field_validator(
-        "education_type", "institution_name", "specialty", mode="before"
-    )
+    @field_validator("education_type", "institution_name", "specialty", mode="before")
     @classmethod
     def _validate_text(cls, value: Any) -> str:
         return _as_text(value)
@@ -106,7 +104,7 @@ class ExperienceEntry(_BaseModel):
     possibility_contact_employer: bool = Field(
         default=True, alias="possibilityContactEmployer"
     )
-    reason: str = Field(default="")
+    reason: str = Field(default="", alias="fireReason")
 
     @field_validator("current_job", "possibility_contact_employer", mode="before")
     @classmethod
@@ -119,6 +117,7 @@ class ExperienceEntry(_BaseModel):
     @classmethod
     def _validate_text(cls, value: Any) -> str:
         return _as_text(value)
+
 
 class OrganizationEntry(_BaseModel):
     """Запись о организации."""
@@ -135,6 +134,7 @@ class CandidateProfile(_BaseModel):
     department: str = Field(default="")
     last_name: str = Field(default="", alias="lastName")
     first_name: str = Field(default="", alias="firstName")
+    mid_name: str = Field(default="", alias="midName")
     has_name_changed: bool = Field(default=False, alias="hasNameChanged")
     birthday: str = Field(default="")
     birthplace: str = Field(default="")
@@ -142,6 +142,7 @@ class CandidateProfile(_BaseModel):
     has_additional_citizenship: bool = Field(
         default=False, alias="hasAdditionalCitizenship"
     )
+    additional_citizenship: str = Field(default="", alias="additionalCitizenship")
     marital_status: str = Field(default="", alias="maritalStatus")
     reg_address: str = Field(default="", alias="regAddress")
     valid_address: str = Field(default="", alias="validAddress")
@@ -157,6 +158,7 @@ class CandidateProfile(_BaseModel):
     passport_issued_by: str = Field(default="", alias="passportIssuedBy")
     education: list[EducationEntry] = Field(default_factory=list)
     has_job: bool = Field(default=False, alias="hasJob")
+    no_job_reason = Field(default="", alias="noJobReason")
     experience: list[ExperienceEntry] = Field(default_factory=list)
     nameWasChanged: list[PrevNameEntry] = Field(default_factory=list)
     organizations: list[OrganizationEntry] = Field(default_factory=list)
@@ -166,6 +168,7 @@ class CandidateProfile(_BaseModel):
         "department",
         "last_name",
         "first_name",
+        "mid_name",
         "birthday",
         "birthplace",
         "citizen",
@@ -198,7 +201,9 @@ class CandidateProfile(_BaseModel):
     def _validate_bool(cls, value: Any) -> bool:
         return _as_bool(value)
 
-    @field_validator("education", "experience", mode="before")
+    @field_validator(
+        "education", "experiencenameWasChanged", "organizations", mode="before"
+    )
     @classmethod
     def _validate_list(cls, value: Any) -> list[Any]:
         if value is None:
