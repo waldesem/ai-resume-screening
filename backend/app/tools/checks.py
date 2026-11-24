@@ -12,8 +12,8 @@ import re
 from datetime import date
 from typing import Any
 
-from app.schemas import CandidateProfile
-from app.utils import (
+from app.schema.schemas import CandidateProfile
+from app.tools.utils import (
     age_on,
     career_span_years,
     earliest_experience_start,
@@ -53,9 +53,7 @@ def make_item(
 
 def sort_findings(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Сортирует находки по убыванию важности."""
-    return sorted(
-        items, key=lambda item: SEVERITY_RANK.get(item.get("severity"), 3)
-    )
+    return sorted(items, key=lambda item: SEVERITY_RANK.get(item.get("severity"), 3))
 
 
 def _digits(value: str | None) -> str:
@@ -156,8 +154,7 @@ def _check_identity(
                 "low",
                 "status_date_invalid",
                 "Дата статуса не распознана",
-                f"Значение statusDate={candidate.status_date!r} не является "
-                "датой.",
+                f"Значение statusDate={candidate.status_date!r} не является датой.",
                 ["statusDate"],
             )
         )
@@ -178,8 +175,7 @@ def _check_identity(
                     "high",
                     "status_date_before_birth",
                     "Дата статуса раньше даты рождения",
-                    "Анкета не может быть актуальна на дату раньше рождения "
-                    "кандидата.",
+                    "Анкета не может быть актуальна на дату раньше рождения кандидата.",
                     ["statusDate", "birthday"],
                 )
             )
@@ -364,8 +360,7 @@ def _check_passport(
                     "high",
                     "passport_issue_date_future",
                     "Дата выдачи паспорта в будущем",
-                    f"passportIssueDate={issue_date.isoformat()} позже "
-                    "текущей даты.",
+                    f"passportIssueDate={issue_date.isoformat()} позже текущей даты.",
                     ["passportIssueDate"],
                 )
             )
@@ -520,8 +515,7 @@ def _check_experience(
                 "medium",
                 "experience_missing",
                 "Опыт работы не указан",
-                "Раздел experience пуст — соответствие опыта должности "
-                "оценить нельзя.",
+                "Раздел experience пуст — соответствие опыта должности оценить нельзя.",
                 ["experience"],
             )
         )

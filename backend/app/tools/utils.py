@@ -8,7 +8,7 @@ import json
 from datetime import date, datetime
 from typing import Any
 
-from app.schemas import CandidateProfile, ExperienceEntry
+from app.schema.schemas import CandidateProfile, ExperienceEntry
 
 _DATE_FORMATS = (
     "%Y-%m-%d",
@@ -107,14 +107,10 @@ def current_job_years(
 
 def candidate_json(candidate: CandidateProfile) -> str:
     """Исходная анкета в JSON (camelCase) для передачи в промпт."""
-    return json.dumps(
-        candidate.model_dump(by_alias=True), ensure_ascii=False, indent=2
-    )
+    return json.dumps(candidate.model_dump(by_alias=True), ensure_ascii=False, indent=2)
 
 
-def describe_candidate(
-    candidate: CandidateProfile, today: date | None = None
-) -> str:
+def describe_candidate(candidate: CandidateProfile, today: date | None = None) -> str:
     """Человекочитаемая сводка анкеты для промптов LLM."""
     today = today or date.today()
     lines: list[str] = [
@@ -126,8 +122,7 @@ def describe_candidate(
     birth = parse_date(candidate.birthday)
     if birth:
         lines.append(
-            f"Дата рождения: {birth.isoformat()} "
-            f"(возраст: {age_on(birth, today)} лет)"
+            f"Дата рождения: {birth.isoformat()} (возраст: {age_on(birth, today)} лет)"
         )
     else:
         lines.append(f"Дата рождения: {candidate.birthday or '—'}")
@@ -155,12 +150,9 @@ def describe_candidate(
                 period = f"с {item.begin_date or '?'} по {item.end_date}"
             else:
                 period = (
-                    f"с {item.begin_date or '?'} "
-                    "(дата окончания в анкете не указана)"
+                    f"с {item.begin_date or '?'} (дата окончания в анкете не указана)"
                 )
-            reason = (
-                f", причина увольнения: {item.reason}" if item.reason else ""
-            )
+            reason = f", причина увольнения: {item.reason}" if item.reason else ""
             lines.append(
                 f"  - {period}: {item.name or '—'}, "
                 f"должность: {item.position or '—'}, "

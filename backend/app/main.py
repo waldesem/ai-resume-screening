@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.agents.screening_agent import screen_candidate
-from app.schemas import ScreeningRequest
+from app.schema.schemas import ScreeningRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,13 +87,13 @@ def screen(payload: ScreeningRequest) -> JSONResponse:
     return JSONResponse(content=report)
 
 
-_FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+_FRONTEND_DIST = Path(__file__).resolve().parent / "static"
 
 if _FRONTEND_DIST.is_dir():
     app.mount(
         "/",
         StaticFiles(directory=_FRONTEND_DIST, html=True),
-        name="frontend",
+        name="static",
     )
 else:
 
@@ -102,7 +102,7 @@ else:
         """Подсказка, если собранный фронтенд ещё отсутствует."""
         return {
             "message": (
-                "Frontend не собран. Выполните `npm run build` в каталоге "
+                "Frontend не собран. Выполните `bun run build` в каталоге "
                 "frontend или запустите Vite dev-сервер."
             )
         }

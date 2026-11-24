@@ -128,25 +128,26 @@ production достаточно одного backend-процесса.
 - [Node.js](https://nodejs.org/) 22+ и [Bun](https://bun.sh/)
 - [Ollama](https://ollama.com)
 
-### 1. Конируем репозиторий
+### 1. Загрузка и запуск модели
+
+```bash
+ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M
+ollama serve
+```
+
+### 2. Конируем репозиторий
 
 ```bash
 git clone https://github.com/waldesem/ai-resume-screening.git
 cd ai-resume-screening
 ```
 
-### 2. Установка Python-зависимостей
+### 3. Установка Python-зависимостей
 
 ```bash
+cd backend
 uv sync
 source .venv/bin/activate # .venv/bin/Activate.ps1
-```
-
-### 3. Загрузка и запуск модели
-
-```bash
-ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M
-ollama serve
 ```
 
 ### 4. Запуск backend
@@ -177,7 +178,7 @@ cd frontend
 bun run build
 ```
 
-После сборки FastAPI при следующем старте увидит `frontend/dist` и начнёт
+После сборки FastAPI при следующем старте увидит `frontend/app/static` и начнёт
 раздавать интерфейс на **<http://localhost:8000>**:
 
 ```bash
@@ -249,37 +250,42 @@ curl http://localhost:8000/health
 ## 📁 Структура проекта
 
 ```
-app/
-├── agents/
-│   ├── contradiction_agent.py  # смысловые противоречия (LLM)
-│   ├── fit_agent.py            # соответствие должности (LLM)
-│   └── screening_agent.py      # оркестратор отчёта
-├── checks.py                   # формальные проверки анкеты
-├── llm.py                      # обёртка Ollama
-├── main.py                     # FastAPI + раздача frontend/dist
-├── prompts.py                  # промпты
-├── schemas.py                  # Pydantic-модели анкеты
-└── utils.py                    # даты, стаж, сводка для LLM
+backend/
+└── app/
+    ├── agents/
+    │   ├── contradiction_agent.py  # смысловые противоречия (LLM)
+    │   ├── fit_agent.py            # соответствие должности (LLM)
+    │   └── screening_agent.py      # оркестратор отчёта
+    ├── main.py                     # FastAPI + раздача frontend/dist
+    ├── models/
+    |   ├── llm.py                  # обёртка Ollama
+    |   └── prompts.py              # промпты
+    ├── schema/
+    |   └── schemas.py              # Pydantic-модели анкеты
+    ├── static/                     # файлы фронтенда после `bun run build`
+    └── tools/
+        ├── checks.py               # формальные проверки анкеты
+        └── utils.py                # даты, стаж, сводка для LLM
 
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── AppIcon.vue         # inline SVG-иконки
-│   │   ├── ScreeningForm.vue   # загрузка анкеты
-│   │   ├── ReportView.vue      # отчёт целиком
+│   │   ├── AppIcon.vue             # inline SVG-иконки
+│   │   ├── ScreeningForm.vue       # загрузка анкеты
+│   │   ├── ReportView.vue          # отчёт целиком
 │   │   ├── ContradictionsPanel.vue
 │   │   ├── FitPanel.vue
 │   │   └── HistoryPanel.vue
 │   ├── composables/useHistory.ts
-│   ├── utils/                  # парсинг JSON, формат, экспорт
-│   ├── api.ts                  # клиент FastAPI
+│   ├── utils/                      # парсинг JSON, формат, экспорт
+│   ├── api.ts                      # клиент FastAPI
 │   ├── types.ts
 │   ├── App.vue
 │   └── main.ts
 ├── index.html
 ├── package.json
 ├── public/
-│   └── favicon.svg             # локальная иконка вкладки
+│   └── favicon.svg                 # локальная иконка вкладки
 ├── tsconfig.json
 └── vite.config.ts
 

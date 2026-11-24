@@ -8,9 +8,9 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "AI-resume-screening"
+name = "ai-resume-screening"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "ollama" },

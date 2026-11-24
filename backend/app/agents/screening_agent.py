@@ -7,10 +7,15 @@ from typing import Any
 
 from app.agents.contradiction_agent import analyze_contradictions
 from app.agents.fit_agent import default_fit, evaluate_fit
-from app.checks import run_rule_checks, sort_findings
-from app.llm import LLMError, get_model
-from app.schemas import CandidateProfile
-from app.utils import age_on, career_span_years, earliest_experience_start, parse_date
+from app.tools.checks import run_rule_checks, sort_findings
+from app.models.llm import LLMError, get_model
+from app.schema.schemas import CandidateProfile
+from app.tools.utils import (
+    age_on,
+    career_span_years,
+    earliest_experience_start,
+    parse_date,
+)
 
 _VERDICT_TEXT = {
     "suitable": "опыт и профиль соответствуют целевой должности",
@@ -29,9 +34,7 @@ def _severity_counts(items: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _build_recommendation(
-    fit: dict[str, Any], counts: dict[str, int]
-) -> str:
+def _build_recommendation(fit: dict[str, Any], counts: dict[str, int]) -> str:
     verdict = fit.get("verdict", "unknown")
     parts = [f"Вердикт по соответствию: {_VERDICT_TEXT.get(verdict, verdict)}."]
 
@@ -55,16 +58,13 @@ def _build_recommendation(
         parts.append("Кандидата рекомендуется передать нанимающему менеджеру.")
     elif verdict == "partially_suitable":
         parts.append(
-            "Кандидата можно рассмотреть при условии закрытия отмеченных "
-            "пробелов."
+            "Кандидата можно рассмотреть при условии закрытия отмеченных пробелов."
         )
 
     return " ".join(parts)
 
 
-def _candidate_facts(
-    candidate: CandidateProfile, today: date
-) -> dict[str, Any]:
+def _candidate_facts(candidate: CandidateProfile, today: date) -> dict[str, Any]:
     birth = parse_date(candidate.birthday)
     career_start = earliest_experience_start(candidate.experience)
     return {

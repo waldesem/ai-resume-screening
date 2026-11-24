@@ -6,10 +6,10 @@ import json
 from datetime import date
 from typing import Any
 
-from app.llm import chat_json
-from app.prompts import CONTRADICTION_ANALYSIS
-from app.schemas import CandidateProfile
-from app.utils import candidate_json, describe_candidate
+from app.models.llm import chat_json
+from app.models.prompts import CONTRADICTION_ANALYSIS
+from app.schema.schemas import CandidateProfile
+from app.tools.utils import candidate_json, describe_candidate
 
 _ALLOWED_SEVERITIES = {"high", "medium", "low"}
 

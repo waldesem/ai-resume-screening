@@ -7,6 +7,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [vue()],
+    build: {
+      emptyOutDir: true,
+      outDir: "../backend/app/static",
+    },
     server: {
       port: 5173,
       proxy: {

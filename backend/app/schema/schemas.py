@@ -158,9 +158,9 @@ class CandidateProfile(_BaseModel):
     passport_issued_by: str = Field(default="", alias="passportIssuedBy")
     education: list[EducationEntry] = Field(default_factory=list)
     has_job: bool = Field(default=False, alias="hasJob")
-    no_job_reason = Field(default="", alias="noJobReason")
+    no_job_reason: str = Field(default="", alias="noJobReason")
     experience: list[ExperienceEntry] = Field(default_factory=list)
-    nameWasChanged: list[PrevNameEntry] = Field(default_factory=list)
+    name_was_changed: list[PrevNameEntry] = Field(default_factory=list)
     organizations: list[OrganizationEntry] = Field(default_factory=list)
 
     @field_validator(
@@ -172,6 +172,7 @@ class CandidateProfile(_BaseModel):
         "birthday",
         "birthplace",
         "citizen",
+        "additional_citizenship",
         "marital_status",
         "reg_address",
         "valid_address",
@@ -202,7 +203,7 @@ class CandidateProfile(_BaseModel):
         return _as_bool(value)
 
     @field_validator(
-        "education", "experiencenameWasChanged", "organizations", mode="before"
+        "education", "experience", "name_was_changed", "organizations", mode="before"
     )
     @classmethod
     def _validate_list(cls, value: Any) -> list[Any]:

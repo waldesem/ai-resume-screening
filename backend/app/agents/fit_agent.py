@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from app.llm import chat_json
-from app.prompts import FIT_EVALUATION
-from app.schemas import CandidateProfile
-from app.utils import career_span_years, describe_candidate
+from app.models.llm import chat_json
+from app.models.prompts import FIT_EVALUATION
+from app.schema.schemas import CandidateProfile
+from app.tools.utils import career_span_years, describe_candidate
 
 _ALLOWED_VERDICTS = {"suitable", "partially_suitable", "not_suitable"}
 _ALLOWED_CONFIDENCE = {"high", "medium", "low"}
@@ -89,20 +89,13 @@ def evaluate_fit(
     return {
         "verdict": verdict,
         "score": _as_score(data.get("score")),
-        "summary": str(data.get("summary") or "").strip()
-        or _DEFAULT_FIT["summary"],
+        "summary": str(data.get("summary") or "").strip() or _DEFAULT_FIT["summary"],
         "strengths": _as_text_list(data.get("strengths")),
         "gaps": _as_text_list(data.get("gaps")),
-        "matched_requirements": _as_text_list(
-            data.get("matched_requirements")
-        ),
-        "unmatched_requirements": _as_text_list(
-            data.get("unmatched_requirements")
-        ),
+        "matched_requirements": _as_text_list(data.get("matched_requirements")),
+        "unmatched_requirements": _as_text_list(data.get("unmatched_requirements")),
         "relevant_experience_years": relevant,
-        "required_experience_years": _as_years(
-            data.get("required_experience_years")
-        ),
+        "required_experience_years": _as_years(data.get("required_experience_years")),
         "confidence": confidence,
     }
 
