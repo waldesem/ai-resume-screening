@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
 :root {
   --bg: #f4f6fb;
   --surface: #ffffff;
@@ -19,8 +22,14 @@
   color-scheme: light;
   /* Только системные шрифты: внешние шрифты не загружаются. */
   font-family:
-    system-ui, -apple-system, "Segoe UI", "Noto Sans", "Helvetica Neue", Arial,
-    "Liberation Sans", sans-serif;
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica Neue",
+    Arial,
+    "Liberation Sans",
+    sans-serif;
 }
 
 * {
@@ -43,8 +52,7 @@ body {
   margin: 0;
   background:
     radial-gradient(circle at top left, #eef2ff 0, transparent 38%),
-    radial-gradient(circle at 85% 0, #f5f3ff 0, transparent 30%),
-    var(--bg);
+    radial-gradient(circle at 85% 0, #f5f3ff 0, transparent 30%), var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
