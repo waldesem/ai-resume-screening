@@ -48,7 +48,7 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.11
+# Assume Python 3.14
 target-version = "py314"
 
 [tool.ruff.lint]

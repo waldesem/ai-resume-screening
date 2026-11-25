@@ -147,39 +147,6 @@ def _check_identity(
             )
         )
 
-    status_date = parse_date(candidate.status_date)
-    if candidate.status_date and status_date is None:
-        items.append(
-            make_item(
-                "low",
-                "status_date_invalid",
-                "Дата статуса не распознана",
-                f"Значение statusDate={candidate.status_date!r} не является датой.",
-                ["statusDate"],
-            )
-        )
-    elif status_date is not None:
-        if status_date > today:
-            items.append(
-                make_item(
-                    "medium",
-                    "status_date_future",
-                    "Дата статуса в будущем",
-                    f"statusDate={status_date.isoformat()} позже текущей даты.",
-                    ["statusDate"],
-                )
-            )
-        if birth is not None and status_date < birth:
-            items.append(
-                make_item(
-                    "high",
-                    "status_date_before_birth",
-                    "Дата статуса раньше даты рождения",
-                    "Анкета не может быть актуальна на дату раньше рождения кандидата.",
-                    ["statusDate", "birthday"],
-                )
-            )
-
     return items
 
 

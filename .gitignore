@@ -379,3 +379,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Auto-generated type declarations
+auto-imports.d.ts
+components.d.ts

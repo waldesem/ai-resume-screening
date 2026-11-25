@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useDateFormat, useNow } from "@vueuse/core";
 
 import type { ScreeningReport } from "../types";
 import { downloadJson } from "../utils/download";
-import {
-  fileTimestamp,
-  formatDateTime,
-  formatYears,
-  verdictClass,
-} from "../utils/format";
+import { formatYears, verdictClass } from "../utils/format";
 import AppIcon from "./AppIcon.vue";
 import ContradictionsPanel from "./ContradictionsPanel.vue";
 import FitPanel from "./FitPanel.vue";
@@ -19,13 +15,19 @@ const candidate = computed(() => props.report.candidate ?? {});
 const contradictions = computed(() => props.report.contradictions ?? {});
 const fit = computed(() => props.report.fit ?? {});
 const errors = computed(() => props.report.analysis_errors ?? []);
-const generatedAt = computed(() => formatDateTime(props.report.generated_at));
+const generatedAt = useDateFormat(
+  props.report.generated_at,
+  "YYYY-MM-DD (ddd)",
+  {
+    locales: "ru-RU",
+  },
+);
 const prettyJson = computed(() => JSON.stringify(props.report, null, 2));
 
 function saveJson(): void {
   downloadJson(
     props.report,
-    `candidate_report_${fileTimestamp()}.json`,
+    `candidate_report_${useDateFormat(useNow(), "YYYY-MM-DD HH:mm:ss")}.json`,
   );
 }
 </script>
@@ -98,7 +100,8 @@ function saveJson(): void {
       <strong>Часть LLM-анализа не выполнена:</strong>
       <ul class="errors-list">
         <li v-for="(error, index) in errors" :key="index">
-          <code>{{ error.stage || "unknown" }}</code>: {{ error.message }}
+          <code>{{ error.stage || "unknown" }}</code
+          >: {{ error.message }}
         </li>
       </ul>
     </div>
