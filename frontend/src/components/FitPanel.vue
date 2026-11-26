@@ -8,7 +8,6 @@ import {
   verdictClass,
   verdictLabel,
 } from "../utils/format";
-import AppIcon from "./AppIcon.vue";
 
 const props = defineProps<{ fit: Fit }>();
 
@@ -41,9 +40,9 @@ const hasYears = computed(
     <div class="fit-grid">
       <div class="fit-cell">
         <span class="metric-label">Вердикт</span>
-        <span class="badge badge-large" :class="`badge-${verdictClass(verdict)}`">
+        <UBadge :color="verdictClass(verdict)">
           {{ verdictLabel(verdict) }}
-        </span>
+        </UBadge>
       </div>
 
       <div class="fit-cell fit-score">
@@ -84,7 +83,7 @@ const hasYears = computed(
     <div class="fit-columns">
       <div class="list-card">
         <h4 class="list-title">
-          <AppIcon name="check" :size="16" />
+          <UIcon name="i-lucide-check" />
           Сильные стороны
         </h4>
         <ul class="list">
@@ -93,7 +92,7 @@ const hasYears = computed(
         </ul>
 
         <h4 class="list-title">
-          <AppIcon name="target" :size="16" />
+          <UIcon name="i-lucide-target" />
           Совпавшие требования
         </h4>
         <ul class="list">
@@ -104,7 +103,7 @@ const hasYears = computed(
 
       <div class="list-card">
         <h4 class="list-title">
-          <AppIcon name="warning" :size="16" />
+          <UIcon name="i-lucide-warning" />
           Пробелы / риски
         </h4>
         <ul class="list">
@@ -113,7 +112,7 @@ const hasYears = computed(
         </ul>
 
         <h4 class="list-title">
-          <AppIcon name="x" :size="16" />
+          <UIcon name="i-lucide-x" />
           Несовпавшие требования
         </h4>
         <ul class="list">

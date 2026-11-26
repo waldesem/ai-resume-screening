@@ -11,18 +11,61 @@ const fileName = ref("");
 const loading = ref(false);
 const error = ref("");
 const success = ref("");
-const report = ref<ScreeningReport | null>(null);
+const report = ref<ScreeningReport | null>({
+  generated_at: "2026-11-22T13:00:00",
+  model: "Qwen3-8B-GGUF:Q4_K_M",
+  candidate: {
+    full_name: "Иванов Пётр",
+    position_name: "Ведущий аналитик данных",
+    department: "Департамент аналитики",
+    age: 33,
+    career_start: "2014-09-01",
+    career_span_years: 12.2,
+    has_job: true,
+    education_count: 2,
+    experience_count: 2,
+  },
+  contradictions: {
+    has_contradictions: true,
+    counts: { high: 1, medium: 2, low: 0 },
+    items: [
+      {
+        severity: "high",
+        code: "experience_0_too_early",
+        title: "Работа началась в слишком раннем возрасте",
+        description: "…",
+        fields: ["experience[0].beginDate", "birthday"],
+        source: "rule",
+      },
+    ],
+    summary: "…",
+  },
+  fit: {
+    verdict: "partially_suitable",
+    score: 72,
+    summary: "…",
+    strengths: ["…"],
+    gaps: ["…"],
+    matched_requirements: ["…"],
+    unmatched_requirements: ["…"],
+    relevant_experience_years: 12.2,
+    required_experience_years: 3.0,
+    confidence: "high",
+  },
+  recommendation: "…",
+  analysis_errors: [],
+});
 const health = ref<"checking" | "online" | "offline">("checking");
 const reportAnchor = ref<HTMLElement | null>(null);
 
 const healthLabel = computed(() => {
   switch (health.value) {
     case "online":
-      return "Backend доступен";
+      return "Сервер доступен";
     case "offline":
-      return "Backend недоступен";
+      return "Сервер недоступен";
     default:
-      return "Проверяем backend…";
+      return "Проверяем сервер";
   }
 });
 
@@ -71,8 +114,12 @@ async function onSubmit(candidate: unknown): Promise<void> {
   <UApp>
     <UHeader title="AI Resume Screening">
       <template #right>
-        <UChip
-          size="xl"
+        <UButton
+          class="rounded-full"
+          :label="healthLabel"
+          :title="healthTitle"
+          icon="i-lucide-refresh-ccw"
+          variant="outline"
           :color="
             health == 'online'
               ? 'success'
@@ -80,26 +127,18 @@ async function onSubmit(candidate: unknown): Promise<void> {
                 ? 'error'
                 : 'warning'
           "
-        >
-          <UButton
-            :label="healthLabel"
-            :title="healthTitle"
-            icon="i-lucide-refresh-ccw"
-            trailing-icon
-            variant="outline"
-            color="neutral"
-            size="sm"
-            @click="refreshHealth"
-          />
-        </UChip>
+          size="xs"
+          @click="refreshHealth"
+        />
       </template>
     </UHeader>
 
-    <UContainer class="pt-4">
+    <UContainer>
       <UMain>
         <UCard
+          class="my-4"
           title="Проверка анкеты"
-          description="Загрузите JSON-анкету кандидата или вставьте её текстом."
+          description="Загрузите JSON-анкету кандидата"
         >
           <ScreeningForm
             :candidate-json="candidateJson"
@@ -116,9 +155,9 @@ async function onSubmit(candidate: unknown): Promise<void> {
         <UAlert v-if="error" :title="error" color="error" />
         <UAlert v-if="success && !error" :title="success" color="success" />
 
-        <div ref="reportAnchor">
-          <ReportView v-if="report" :report="report" />
-        </div>
+        <!-- <div ref="reportAnchor"> -->
+        <ReportView v-if="report" :report="report" />
+        <!-- </div> -->
       </UMain>
 
       <UFooter class="text-muted">

@@ -5,7 +5,6 @@ import { useDateFormat, useNow } from "@vueuse/core";
 import type { ScreeningReport } from "../types";
 import { downloadJson } from "../utils/download";
 import { formatYears, verdictClass } from "../utils/format";
-import AppIcon from "./AppIcon.vue";
 import ContradictionsPanel from "./ContradictionsPanel.vue";
 import FitPanel from "./FitPanel.vue";
 
@@ -33,92 +32,105 @@ function saveJson(): void {
 </script>
 
 <template>
-  <section class="report">
-    <div class="report-header">
-      <div class="report-identity">
-        <p class="eyebrow">Отчёт о проверке</p>
-        <h2 class="report-title">
-          {{ candidate.full_name || "Кандидат без имени" }}
-        </h2>
-        <p class="muted report-subtitle">
-          {{ candidate.position_name || "Должность не указана" }}
-          <span v-if="candidate.department"> · {{ candidate.department }}</span>
-        </p>
+  <UCard>
+    <template #header>
+      <div class="grid grid-cols-2">
+        <div>
+          <p class="text-blue-600 font-semibold uppercase">Отчёт о проверке</p>
+          <h2 class="text-xl font-semibold">
+            {{ candidate.full_name || "Кандидат без имени" }}
+          </h2>
+          <p class="text-gray-600">
+            {{ candidate.position_name || "Должность не указана" }}
+            <span v-if="candidate.department">
+              · {{ candidate.department }}</span
+            >
+          </p>
+        </div>
+
+        <div class="flex flex-col justify-end text-end text-sm text-gray-600">
+          <div v-if="report.model">Модель: {{ report.model }}</div>
+          <div v-if="generatedAt">Сформирован: {{ generatedAt }}</div>
+        </div>
+      </div>
+    </template>
+
+    <div class="grid grid-rows gap-3">
+      <div class="grid grid-cols-4 gap-3">
+        <UCard
+          v-for="(data, idx) in [
+            {
+              label: 'Возраст',
+              value: candidate.age ?? '—',
+            },
+            {
+              label: 'Стаж по датам',
+              value: formatYears(candidate.career_span_years),
+            },
+            {
+              label: 'Образование',
+              value: candidate.education_count ?? 0,
+            },
+            {
+              label: 'Мест работы',
+              value: candidate.experience_count ?? 0,
+            },
+          ]"
+          :key="idx"
+          variant="subtle"
+          :title="data.label"
+          :description="data.value.toString()"
+        />
       </div>
 
-      <div class="report-meta">
-        <span v-if="report.model" class="meta-item">
-          Модель: {{ report.model }}
-        </span>
-        <span v-if="generatedAt" class="meta-item">
-          Сформирован: {{ generatedAt }}
-        </span>
-      </div>
-    </div>
+      <ContradictionsPanel :contradictions="contradictions" />
 
-    <div class="metrics-grid">
-      <div class="metric">
-        <span class="metric-label">Возраст</span>
-        <span class="metric-value">{{ candidate.age ?? "—" }}</span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Стаж по датам</span>
-        <span class="metric-value">
-          {{ formatYears(candidate.career_span_years) }}
-        </span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Образование</span>
-        <span class="metric-value">{{ candidate.education_count ?? 0 }}</span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Мест работы</span>
-        <span class="metric-value">{{ candidate.experience_count ?? 0 }}</span>
-      </div>
-    </div>
+      <FitPanel :fit="fit" />
 
-    <ContradictionsPanel :contradictions="contradictions" />
-    <FitPanel :fit="fit" />
-
-    <section class="section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <span class="section-index">3</span>
-          Рекомендация
-        </h3>
+      <div class="inline-block font-semibold text-lg">
+        <span class="bg-gray-100 px-2 rounded-lg">3</span>
+        Рекомендация
       </div>
-      <div
-        class="recommendation"
-        :class="`recommendation-${verdictClass(fit.verdict)}`"
+      <UAlert
+        icon="i-lucide-lightbulb"
+        :color="verdictClass(fit.verdict)"
+        :title="report.recommendation || '—'"
+      />
+
+      <UAlert
+        v-if="errors.length"
+        title="Часть LLM-анализа не выполнена:"
+        :ui="{ root: 'bg-red-100' }"
       >
-        <AppIcon class="recommendation-icon" name="bulb" :size="20" />
-        <p>{{ report.recommendation || "—" }}</p>
-      </div>
-    </section>
+        <template #description>
+          <ul>
+            <li v-for="(error, index) in errors" :key="index">
+              <code>{{ error.stage || "unknown" }}</code
+              >: {{ error.message }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
 
-    <div v-if="errors.length" class="alert alert-error">
-      <strong>Часть LLM-анализа не выполнена:</strong>
-      <ul class="errors-list">
-        <li v-for="(error, index) in errors" :key="index">
-          <code>{{ error.stage || "unknown" }}</code
-          >: {{ error.message }}
-        </li>
-      </ul>
+      <UCollapsible class="relative w-full">
+        <UButton
+          label="Полный отчёт (JSON)"
+          color="neutral"
+          variant="subtle"
+          trailing-icon="i-lucide-chevron-down"
+          block
+        />
+        <template #content>
+          <UButton
+            class="absolute top-15 right-5"
+            icon="i-lucide-download"
+            size="sm"
+            variant="outline"
+            @click="saveJson"
+          />
+          <pre class="text-sm">{{ prettyJson }}</pre>
+        </template>
+      </UCollapsible>
     </div>
-
-    <details class="json-block">
-      <summary>Полный отчёт (JSON)</summary>
-      <div class="json-toolbar">
-        <button
-          class="btn btn-secondary btn-small"
-          type="button"
-          @click="saveJson"
-        >
-          <AppIcon name="download" :size="16" />
-          Скачать JSON
-        </button>
-      </div>
-      <pre class="json-content">{{ prettyJson }}</pre>
-    </details>
-  </section>
+  </UCard>
 </template>

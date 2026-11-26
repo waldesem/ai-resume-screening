@@ -3,7 +3,6 @@ import { computed } from "vue";
 
 import type { Contradictions } from "../types";
 import { severityClass, severityLabel } from "../utils/format";
-import AppIcon from "./AppIcon.vue";
 
 const props = defineProps<{ contradictions: Contradictions }>();
 
@@ -18,46 +17,58 @@ function sourceLabel(source?: string): string {
 </script>
 
 <template>
-  <section class="section">
-    <div class="section-header">
-      <h3 class="section-title">
-        <span class="section-index">1</span>
-        Внутренние противоречия
-      </h3>
+  <div class="grid grid-row gap-3">
+    <div class="inline-block font-semibold text-lg">
+      <span class="bg-gray-100 px-2 rounded-lg">1</span>
+      Внутренние противоречия
     </div>
 
-    <div class="counts-grid">
-      <div class="count-card count-high">
-        <span class="count-value">{{ counts.high ?? 0 }}</span>
-        <span class="count-label">
-          <span class="count-dot count-dot-high"></span>
-          Критичные
-        </span>
-      </div>
-      <div class="count-card count-medium">
-        <span class="count-value">{{ counts.medium ?? 0 }}</span>
-        <span class="count-label">
-          <span class="count-dot count-dot-medium"></span>
-          Средние
-        </span>
-      </div>
-      <div class="count-card count-low">
-        <span class="count-value">{{ counts.low ?? 0 }}</span>
-        <span class="count-label">
-          <span class="count-dot count-dot-low"></span>
-          Незначительные
-        </span>
-      </div>
+    <div class="grid grid-cols-3 gap-3">
+      <UAlert
+        v-for="(data, idx) in [
+          {
+            label: 'Критичные',
+            value: counts.high ?? 0,
+            bg: 'bg-red-100',
+            text: 'text-red-800',
+          },
+          {
+            label: 'Средние',
+            value: counts.medium ?? 0,
+            bg: 'bg-orange-100',
+            text: 'text-orange-800',
+          },
+          {
+            label: 'Незначительные',
+            value: counts.low ?? 0,
+            bg: 'bg-yellow-100',
+            text: 'text-yellow-800',
+          },
+        ]"
+        :key="idx"
+        :ui="{ root: data.bg, title: data.text, description: data.text }"
+        variant="subtle"
+        :description="data.value.toString()"
+        :title="data.label"
+      />
     </div>
 
-    <p v-if="contradictions.summary" class="info-box">
-      {{ contradictions.summary }}
-    </p>
+    <UAlert
+      v-if="contradictions.summary"
+      :title="contradictions.summary"
+      :ui="{ root: 'bg-blue-100', title: 'text-blue-800' }"
+    />
 
-    <div v-if="!items.length" class="empty-state empty-success">
-      <AppIcon class="empty-icon" name="check" :size="20" />
-      <p>Формальных и смысловых противоречий не найдено.</p>
-    </div>
+    <UAlert
+      v-if="!items.length"
+      icon="i-lucide-check-check"
+      title="Формальных и смысловых противоречий не найдено."
+      :ui="{
+        root: 'bg-green-100',
+        title: 'text-green-800',
+        icon: 'text-green-800',
+      }"
+    />
 
     <div v-else class="findings">
       <article
@@ -92,5 +103,5 @@ function sourceLabel(source?: string): string {
         </div>
       </article>
     </div>
-  </section>
+  </div>
 </template>

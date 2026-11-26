@@ -22,11 +22,11 @@ const file = ref<File>();
 const jsonStatus = computed(() => {
   const text = props.candidateJson.trim();
   if (!text) {
-    return { state: "empty", label: "JSON не загружен" };
+    return { state: "neutral", label: "JSON не загружен" };
   }
   try {
     parseCandidate(text);
-    return { state: "ok", label: "JSON корректен" };
+    return { state: "success", label: "JSON корректен" };
   } catch (error) {
     return { state: "error", label: (error as Error).message };
   }
@@ -57,19 +57,24 @@ function submit() {
 </script>
 
 <template>
-  <UFormField class="form" @change.prevent="screen" @submit.prevent="submit">
+  <UFormField @change.prevent="screen" @submit.prevent="submit">
     <UFileUpload
       v-model="file"
       accept=".json"
-      class="w-full min-h-48"
-      label="Выберите JSON-файл"
+      class="w-full"
+      label="Выберите/перенесите JSON-файл"
       description="Поддерживаются UTF-8 и Windows-1251"
     />
-    <div class="flex justify-between py-2">
-      <p :class="`json-status-${jsonStatus.state}`">
+    <div class="flex justify-between pt-4">
+      <UBadge :color="jsonStatus.state" variant="soft">
         {{ jsonStatus.label }}
-      </p>
-      <UButton :disabled="loading" :loading="loading" type="submit">
+      </UBadge>
+      <UButton
+        :disabled="loading"
+        :loading="loading"
+        variant="outline"
+        type="submit"
+      >
         <span>{{
           loading
             ? "Анализируем анкету… Это может занять несколько минут."

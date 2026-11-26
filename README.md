@@ -270,13 +270,10 @@ backend/
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── AppIcon.vue             # inline SVG-иконки
 │   │   ├── ScreeningForm.vue       # загрузка анкеты
 │   │   ├── ReportView.vue          # отчёт целиком
 │   │   ├── ContradictionsPanel.vue
-│   │   ├── FitPanel.vue
-│   │   └── HistoryPanel.vue
-│   ├── composables/useHistory.ts
+│   │   └── FitPanel.vue
 │   ├── utils/                      # парсинг JSON, формат, экспорт
 │   ├── api.ts                      # клиент FastAPI
 │   ├── types.ts
@@ -290,8 +287,7 @@ frontend/
 └── vite.config.ts
 
 examples/
-├── candidate.json              # корректная анкета
-└── candidate_with_contradictions.json
+└── candidate.json              # корректная анкета
 ```
 
 ## Screenshot
