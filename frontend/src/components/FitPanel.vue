@@ -29,14 +29,13 @@ const hasYears = computed(
 </script>
 
 <template>
-  <section class="section">
-    <div class="section-header">
-      <h3 class="section-title">
-        <span class="section-index">2</span>
-        Соответствие должности
-      </h3>
+  <div class="grid grid-row gap-3 pt-2">
+    <div class="inline-block font-semibold text-lg">
+      <span class="bg-gray-100 px-2 rounded-lg">2</span>
+      Соответствие должности
     </div>
 
+    <!-- <div class="grid grid-cols-3 gap-3"> -->
     <div class="fit-grid">
       <div class="fit-cell">
         <span class="metric-label">Вердикт</span>
@@ -121,5 +120,5 @@ const hasYears = computed(
         </ul>
       </div>
     </div>
-  </section>
+  </div>
 </template>

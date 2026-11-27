@@ -105,7 +105,6 @@ CONTRADICTION_ANALYSIS = """
   "contradictions": [
     {{
       "severity": "high|medium|low",
-      "code": "короткий_код_латиницей",
       "title": "краткая формулировка",
       "description": "в чём именно противоречие или риск и на каких полях основано",
       "fields": ["поле1", "поле2"]

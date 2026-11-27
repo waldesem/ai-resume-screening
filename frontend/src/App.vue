@@ -31,7 +31,6 @@ const report = ref<ScreeningReport | null>({
     items: [
       {
         severity: "high",
-        code: "experience_0_too_early",
         title: "Работа началась в слишком раннем возрасте",
         description: "…",
         fields: ["experience[0].beginDate", "birthday"],
@@ -68,12 +67,6 @@ const healthLabel = computed(() => {
       return "Проверяем сервер";
   }
 });
-
-const healthTitle = computed(() =>
-  health.value === "offline"
-    ? "FastAPI не отвечает. Запустите backend и обновите проверку."
-    : "Состояние соединения с FastAPI",
-);
 
 onMounted(refreshHealth);
 
@@ -114,22 +107,24 @@ async function onSubmit(candidate: unknown): Promise<void> {
   <UApp>
     <UHeader title="AI Resume Screening">
       <template #right>
-        <UButton
-          class="rounded-full"
-          :label="healthLabel"
-          :title="healthTitle"
-          icon="i-lucide-refresh-ccw"
-          variant="outline"
-          :color="
-            health == 'online'
-              ? 'success'
-              : health == 'offline'
-                ? 'error'
-                : 'warning'
-          "
-          size="xs"
-          @click="refreshHealth"
-        />
+        <UTooltip :text="healthLabel">
+          <UAvatar
+            :icon="
+              health == 'online'
+                ? 'i-lucide-wifi'
+                : health == 'offline'
+                  ? 'i-lucide-wifi-off'
+                  : 'i-lucide-wifi-sync'
+            "
+            :color="
+              health == 'online'
+                ? 'success'
+                : health == 'offline'
+                  ? 'error'
+                  : 'warning'
+            "
+          />
+        </UTooltip>
       </template>
     </UHeader>
 
@@ -160,7 +155,7 @@ async function onSubmit(candidate: unknown): Promise<void> {
         <!-- </div> -->
       </UMain>
 
-      <UFooter class="text-muted">
+      <UFooter class="text-sm text-gray-600">
         <template #left>
           <span>AI Resume Screening</span>
         </template>

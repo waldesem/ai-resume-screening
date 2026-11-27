@@ -81,7 +81,6 @@ production достаточно одного backend-процесса.
     "items": [
       {
         "severity": "high",
-        "code": "experience_0_too_early",
         "title": "Работа началась в слишком раннем возрасте",
         "description": "…",
         "fields": ["experience[0].beginDate", "birthday"],

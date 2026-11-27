@@ -17,7 +17,7 @@ function sourceLabel(source?: string): string {
 </script>
 
 <template>
-  <div class="grid grid-row gap-3">
+  <div class="grid grid-row gap-3 pt-2">
     <div class="inline-block font-semibold text-lg">
       <span class="bg-gray-100 px-2 rounded-lg">1</span>
       Внутренние противоречия
@@ -70,38 +70,34 @@ function sourceLabel(source?: string): string {
       }"
     />
 
-    <div v-else class="findings">
-      <article
+    <div v-else>
+      <UCard
         v-for="(item, index) in items"
-        :key="item.code ? `${item.code}-${index}` : index"
-        class="finding"
+        :key="index"
+        :ui="{header: 'border-none'}"
       >
-        <div class="finding-head">
-          <span class="badge" :class="`badge-${severityClass(item.severity)}`">
-            {{ severityLabel(item.severity) }}
-          </span>
-          <h4 class="finding-title">{{ item.title || "Противоречие" }}</h4>
-          <span
-            class="finding-source"
-            :class="{ 'is-llm': item.source === 'llm' }"
-          >
-            {{ sourceLabel(item.source) }}
-          </span>
-        </div>
-
-        <p v-if="item.description" class="finding-desc">
-          {{ item.description }}
-        </p>
-
-        <div v-if="item.fields?.length || item.code" class="finding-foot">
-          <div v-if="item.fields?.length" class="chips">
-            <span v-for="field in item.fields" :key="field" class="chip">
-              {{ field }}
-            </span>
+        <template #header>
+          <div class="flex justify-between">
+            <UBadge
+              :label="severityLabel(item.severity)"
+              :color="severityClass(item.severity)"
+            />
+            <div class="justify-self-start font-semibold">
+              {{ item.title || "Противоречие" }}
+            </div>
+            <UBadge
+              color="secondary"
+              variant="soft"
+              class="uppercase"
+              :label="sourceLabel(item.source)"
+            />
           </div>
-          <code v-if="item.code" class="finding-code">{{ item.code }}</code>
+        </template>
+
+        <div v-if="item.description">
+          {{ item.description }}
         </div>
-      </article>
+      </Ucard>
     </div>
   </div>
 </template>

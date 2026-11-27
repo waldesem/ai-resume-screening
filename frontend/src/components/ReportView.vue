@@ -34,21 +34,21 @@ function saveJson(): void {
 <template>
   <UCard>
     <template #header>
-      <div class="grid grid-cols-2">
+      <div class="flex justify-between">
         <div>
-          <p class="text-blue-600 font-semibold uppercase">Отчёт о проверке</p>
-          <h2 class="text-xl font-semibold">
+          <div class="text-blue-600 font-semibold">ОТЧЕТ О ПРОВЕРКЕ</div>
+          <div class="text-xl font-semibold">
             {{ candidate.full_name || "Кандидат без имени" }}
-          </h2>
-          <p class="text-gray-600">
+          </div>
+          <div class="text-gray-600">
             {{ candidate.position_name || "Должность не указана" }}
             <span v-if="candidate.department">
               · {{ candidate.department }}</span
             >
-          </p>
+          </div>
         </div>
 
-        <div class="flex flex-col justify-end text-end text-sm text-gray-600">
+        <div class="text-sm text-gray-600">
           <div v-if="report.model">Модель: {{ report.model }}</div>
           <div v-if="generatedAt">Сформирован: {{ generatedAt }}</div>
         </div>
@@ -87,7 +87,7 @@ function saveJson(): void {
 
       <FitPanel :fit="fit" />
 
-      <div class="inline-block font-semibold text-lg">
+      <div class="inline-block font-semibold text-lg pt-2">
         <span class="bg-gray-100 px-2 rounded-lg">3</span>
         Рекомендация
       </div>

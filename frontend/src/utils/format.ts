@@ -48,14 +48,14 @@ export function severityLabel(severity?: string | null): string {
 
 export function severityClass(
   severity?: string | null,
-): "high" | "medium" | "low" {
+): "error" | "danger" | "warning" {
   switch (severity) {
     case "high":
-      return "high";
+      return "error";
     case "medium":
-      return "medium";
+      return "danger";
     default:
-      return "low";
+      return "warning";
   }
 }
 

@@ -32,7 +32,6 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
 def make_item(
     severity: str,
-    code: str,
     title: str,
     description: str,
     fields: list[str] | None = None,
@@ -43,7 +42,6 @@ def make_item(
         severity = "medium"
     return {
         "severity": severity,
-        "code": code,
         "title": title,
         "description": description,
         "fields": fields or [],
