@@ -13,9 +13,6 @@ const props = defineProps<{ fit: Fit }>();
 
 const verdict = computed(() => props.fit.verdict ?? "unknown");
 const score = computed(() => props.fit.score ?? null);
-const scoreWidth = computed(
-  () => `${Math.max(0, Math.min(100, score.value ?? 0))}%`,
-);
 
 const strengths = computed(() => props.fit.strengths ?? []);
 const gaps = computed(() => props.fit.gaps ?? []);
@@ -35,57 +32,55 @@ const hasYears = computed(
       Соответствие должности
     </div>
 
-    <!-- <div class="grid grid-cols-3 gap-3"> -->
-    <div class="fit-grid">
-      <div class="fit-cell">
-        <span class="metric-label">Вердикт</span>
-        <UBadge :color="verdictClass(verdict)">
-          {{ verdictLabel(verdict) }}
-        </UBadge>
+    <div class="grid grid-cols-4 gap-3">
+      <UCard variant="soft">
+        <div class="font-semibold text-gray-500 pb-1">РЕШЕНИЕ</div>
+        <UBadge
+          :color="verdictClass(verdict)"
+          size="lg"
+          :label="verdictLabel(verdict)"
+        />
+      </UCard>
+
+      <div class="col-span-2">
+        <UCard variant="soft">
+          <div class="font-semibold text-gray-500">ШКАЛА СООТВЕТСТВИЯ</div>
+          <UProgress v-model="score" :color="verdictClass(verdict)" status />
+        </UCard>
       </div>
 
-      <div class="fit-cell fit-score">
-        <div class="fit-score-head">
-          <span class="metric-label">Оценка соответствия</span>
-          <strong>{{ score !== null ? `${score}%` : "—" }}</strong>
-        </div>
-        <div class="progress">
-          <div
-            class="progress-bar"
-            :class="`progress-${verdictClass(verdict)}`"
-            :style="{ width: scoreWidth }"
-          ></div>
-        </div>
-      </div>
-
-      <div class="fit-cell">
-        <span class="metric-label">Уверенность</span>
-        <span class="fit-confidence-value">
+      <UCard variant="soft">
+        <div class="font-semibold text-gray-500 pb-1">УВЕРЕННОСТЬ</div>
+        <div class="font-semibold text-gray-800">
           {{ confidenceLabel(fit.confidence) }}
-        </span>
-      </div>
+        </div>
+      </UCard>
     </div>
 
-    <p v-if="fit.summary" class="fit-summary">{{ fit.summary }}</p>
+    <UAlert v-if="fit.summary" color="info" :title="fit.summary" />
 
-    <div v-if="hasYears" class="years-row">
-      <div class="year-item">
-        <span class="metric-label">Релевантный опыт</span>
-        <strong>{{ formatYears(fit.relevant_experience_years) }}</strong>
-      </div>
-      <div class="year-item">
-        <span class="metric-label">Требуется</span>
-        <strong>{{ formatYears(fit.required_experience_years) }}</strong>
-      </div>
+    <div v-if="hasYears" class="grid grid-cols-2 gap-3">
+      <UCard variant="subtle">
+        <div class="font-semibold text-gray-500">Релевантный опыт</div>
+        <div class="font-semibold text-gray-800">
+          {{ formatYears(fit.relevant_experience_years) }}
+        </div>
+      </UCard>
+      <UCard variant="subtle">
+        <div class="font-semibold text-gray-500">Требуется</div>
+        <div class="font-semibold text-gray-800">
+          {{ formatYears(fit.required_experience_years) }}
+        </div>
+      </UCard>
     </div>
 
-    <div class="fit-columns">
-      <div class="list-card">
+    <div class="grid grid-cols-2 gap-3">
+      <UCard>
         <h4 class="list-title">
           <UIcon name="i-lucide-check" />
           Сильные стороны
         </h4>
-        <ul class="list">
+        <ul>
           <li v-for="item in strengths" :key="item">{{ item }}</li>
           <li v-if="!strengths.length" class="list-empty">—</li>
         </ul>
@@ -94,18 +89,18 @@ const hasYears = computed(
           <UIcon name="i-lucide-target" />
           Совпавшие требования
         </h4>
-        <ul class="list">
+        <ul>
           <li v-for="item in matched" :key="item">{{ item }}</li>
           <li v-if="!matched.length" class="list-empty">—</li>
         </ul>
-      </div>
+      </UCard>
 
-      <div class="list-card">
+      <UCard>
         <h4 class="list-title">
           <UIcon name="i-lucide-warning" />
           Пробелы / риски
         </h4>
-        <ul class="list">
+        <ul>
           <li v-for="item in gaps" :key="item">{{ item }}</li>
           <li v-if="!gaps.length" class="list-empty">—</li>
         </ul>
@@ -114,11 +109,11 @@ const hasYears = computed(
           <UIcon name="i-lucide-x" />
           Несовпавшие требования
         </h4>
-        <ul class="list">
+        <ul>
           <li v-for="item in unmatched" :key="item">{{ item }}</li>
           <li v-if="!unmatched.length" class="list-empty">—</li>
         </ul>
-      </div>
+      </UCard>
     </div>
   </div>
 </template>
