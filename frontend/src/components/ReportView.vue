@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useDateFormat, useNow } from "@vueuse/core";
+import { useDateFormat } from "@vueuse/core";
 
 import type { ScreeningReport } from "../types";
 import { downloadJson } from "../utils/download";
 import { formatYears, verdictClass } from "../utils/format";
-import ContradictionsPanel from "./ContradictionsPanel.vue";
+
+import ContradictPanel from "./ContradictPanel.vue";
 import FitPanel from "./FitPanel.vue";
 
 const props = defineProps<{ report: ScreeningReport }>();
@@ -15,18 +16,16 @@ const contradictions = computed(() => props.report.contradictions ?? {});
 const fit = computed(() => props.report.fit ?? {});
 const errors = computed(() => props.report.analysis_errors ?? []);
 const generatedAt = useDateFormat(
-  props.report.generated_at,
+  computed(() => props.report.generated_at),
   "YYYY-MM-DD (ddd)",
-  {
-    locales: "ru-RU",
-  },
+  { locales: "ru-RU" },
 );
 const prettyJson = computed(() => JSON.stringify(props.report, null, 2));
 
 function saveJson(): void {
   downloadJson(
     props.report,
-    `candidate_report_${useDateFormat(useNow(), "YYYY-MM-DD HH:mm:ss")}.json`,
+    `candidate_report_${new Date().toISOString()}.json`,
   );
 }
 </script>
@@ -83,7 +82,7 @@ function saveJson(): void {
         />
       </div>
 
-      <ContradictionsPanel :contradictions="contradictions" />
+      <ContradictPanel :contradictions="contradictions" />
 
       <FitPanel :fit="fit" />
 

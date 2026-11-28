@@ -2,58 +2,17 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 
 import { checkHealth, screenCandidate } from "./api";
-import ReportView from "./components/ReportView.vue";
-import ScreeningForm from "./components/ScreeningForm.vue";
+
 import type { ScreeningReport } from "./types";
 
+import ReportView from "./components/ReportView.vue";
+import ScreenForm from "./components/ScreenForm.vue";
+
 const candidateJson = ref("");
-const fileName = ref("");
 const loading = ref(false);
 const error = ref("");
 const success = ref("");
-const report = ref<ScreeningReport | null>({
-  generated_at: "2026-11-22T13:00:00",
-  model: "Qwen3-8B-GGUF:Q4_K_M",
-  candidate: {
-    full_name: "Иванов Пётр",
-    position_name: "Ведущий аналитик данных",
-    department: "Департамент аналитики",
-    age: 33,
-    career_start: "2014-09-01",
-    career_span_years: 12.2,
-    has_job: true,
-    education_count: 2,
-    experience_count: 2,
-  },
-  contradictions: {
-    has_contradictions: true,
-    counts: { high: 1, medium: 2, low: 0 },
-    items: [
-      {
-        severity: "high",
-        title: "Работа началась в слишком раннем возрасте",
-        description: "…",
-        fields: ["experience[0].beginDate", "birthday"],
-        source: "rule",
-      },
-    ],
-    summary: "…",
-  },
-  fit: {
-    verdict: "partially_suitable",
-    score: 72,
-    summary: "…",
-    strengths: ["…"],
-    gaps: ["…"],
-    matched_requirements: ["…"],
-    unmatched_requirements: ["…"],
-    relevant_experience_years: 12.2,
-    required_experience_years: 3.0,
-    confidence: "high",
-  },
-  recommendation: "…",
-  analysis_errors: [],
-});
+const report = ref<ScreeningReport | null>();
 const health = ref<"checking" | "online" | "offline">("checking");
 const reportAnchor = ref<HTMLElement | null>(null);
 
@@ -104,65 +63,58 @@ async function onSubmit(candidate: unknown): Promise<void> {
 </script>
 
 <template>
-  <UApp>
-    <UHeader title="AI Resume Screening">
-      <template #right>
-        <UTooltip :text="healthLabel">
-          <UAvatar
-            :icon="
-              health == 'online'
-                ? 'i-lucide-wifi'
-                : health == 'offline'
-                  ? 'i-lucide-wifi-off'
-                  : 'i-lucide-wifi-sync'
-            "
-            :color="
-              health == 'online'
-                ? 'success'
-                : health == 'offline'
-                  ? 'error'
-                  : 'warning'
-            "
-          />
-        </UTooltip>
+  <UContainer>
+    <header class="flex items-center justify-between my-5">
+      <div class="text-xl font-bold">AI Resume Screening</div>
+      <UAvatar
+        :text="healthLabel"
+        :icon="
+          health == 'online'
+            ? 'i-lucide-wifi'
+            : health == 'offline'
+              ? 'i-lucide-wifi-off'
+              : 'i-lucide-wifi-sync'
+        "
+        :color="
+          health == 'online'
+            ? 'success'
+            : health == 'offline'
+              ? 'error'
+              : 'warning'
+        "
+      />
+    </header>
+    <UMain>
+      <UCard
+        class="my-4"
+        title="Проверка анкеты"
+        description="Загрузите JSON-анкету кандидата"
+      >
+        <ScreenForm
+          :candidate-json="candidateJson"
+          :loading="loading"
+          @update:candidate-json="candidateJson = $event"
+          @submit="onSubmit"
+          @error="onFormError"
+          @clear-error="clearMessages"
+        />
+      </UCard>
+
+      <UAlert v-if="error" :title="error" color="error" />
+      <UAlert v-if="success && !error" :title="success" color="success" />
+
+      <div ref="reportAnchor">
+      <ReportView v-if="report" :report="report" />
+      </div>
+    </UMain>
+
+    <UFooter class="text-sm text-gray-600">
+      <template #left>
+        <span>AI Resume Screening</span>
       </template>
-    </UHeader>
-
-    <UContainer>
-      <UMain>
-        <UCard
-          class="my-4"
-          title="Проверка анкеты"
-          description="Загрузите JSON-анкету кандидата"
-        >
-          <ScreeningForm
-            :candidate-json="candidateJson"
-            :file-name="fileName"
-            :loading="loading"
-            @update:candidate-json="candidateJson = $event"
-            @update:file-name="fileName = $event"
-            @submit="onSubmit"
-            @error="onFormError"
-            @clear-error="clearMessages"
-          />
-        </UCard>
-
-        <UAlert v-if="error" :title="error" color="error" />
-        <UAlert v-if="success && !error" :title="success" color="success" />
-
-        <!-- <div ref="reportAnchor"> -->
-        <ReportView v-if="report" :report="report" />
-        <!-- </div> -->
-      </UMain>
-
-      <UFooter class="text-sm text-gray-600">
-        <template #left>
-          <span>AI Resume Screening</span>
-        </template>
-        <template #right>
-          <span>FastAPI · Ollama · Qwen · Vue</span>
-        </template>
-      </UFooter>
-    </UContainer>
-  </UApp>
+      <template #right>
+        <span>FastAPI · Ollama · Qwen · Vue</span>
+      </template>
+    </UFooter>
+  </UContainer>
 </template>

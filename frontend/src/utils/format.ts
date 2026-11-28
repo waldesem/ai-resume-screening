@@ -26,14 +26,14 @@ export function verdictLabel(verdict?: string | null): string {
 
 export function verdictClass(
   verdict?: string | null,
-): "success" | "warning" | "danger" | "neutral" {
+): "success" | "warning" | "error" | "neutral" {
   switch (verdict) {
     case "suitable":
       return "success";
     case "partially_suitable":
       return "warning";
     case "not_suitable":
-      return "danger";
+      return "error";
     default:
       return "neutral";
   }
@@ -48,14 +48,14 @@ export function severityLabel(severity?: string | null): string {
 
 export function severityClass(
   severity?: string | null,
-): "error" | "danger" | "warning" {
+): "error" | "warning" | "neutral" {
   switch (severity) {
     case "high":
       return "error";
     case "medium":
-      return "danger";
-    default:
       return "warning";
+    default:
+      return "neutral";
   }
 }
 

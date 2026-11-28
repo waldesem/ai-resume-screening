@@ -12,7 +12,14 @@ import {
 const props = defineProps<{ fit: Fit }>();
 
 const verdict = computed(() => props.fit.verdict ?? "unknown");
-const score = computed(() => props.fit.score ?? null);
+const score = computed({
+  get() {
+    return props.fit.score ?? null
+  },
+  set(newValue) {
+    return newValue
+  }
+  })
 
 const strengths = computed(() => props.fit.strengths ?? []);
 const gaps = computed(() => props.fit.gaps ?? []);
@@ -76,42 +83,42 @@ const hasYears = computed(
 
     <div class="grid grid-cols-2 gap-3">
       <UCard>
-        <h4 class="list-title">
-          <UIcon name="i-lucide-check" />
-          Сильные стороны
-        </h4>
+        <div class="flex items-center gap-2 py-2">
+          <UIcon name="i-lucide-rocket" />
+          <div class="font-semibold text-gray-500">Сильные стороны</div>
+        </div>
         <ul>
           <li v-for="item in strengths" :key="item">{{ item }}</li>
           <li v-if="!strengths.length" class="list-empty">—</li>
         </ul>
 
-        <h4 class="list-title">
-          <UIcon name="i-lucide-target" />
-          Совпавшие требования
-        </h4>
+        <div class="flex items-center gap-2 py-2">
+          <UIcon name="i-lucide-thumbs-up" />
+          <div class="font-semibold text-gray-500">Совпавшие требования</div>
+        </div>
         <ul>
           <li v-for="item in matched" :key="item">{{ item }}</li>
-          <li v-if="!matched.length" class="list-empty">—</li>
+          <li v-if="!matched.length">—</li>
         </ul>
       </UCard>
 
       <UCard>
-        <h4 class="list-title">
-          <UIcon name="i-lucide-warning" />
-          Пробелы / риски
-        </h4>
+        <div class="flex items-center gap-2 py-2">
+          <UIcon name="i-lucide-triangle-exclamation-point" />
+          <div class="font-semibold text-gray-500">Пробелы / риски</div>
+        </div>
         <ul>
           <li v-for="item in gaps" :key="item">{{ item }}</li>
-          <li v-if="!gaps.length" class="list-empty">—</li>
+          <li v-if="!gaps.length">—</li>
         </ul>
 
-        <h4 class="list-title">
-          <UIcon name="i-lucide-x" />
-          Несовпавшие требования
-        </h4>
+        <div class="flex items-center gap-2 py-2">
+          <UIcon name="i-lucide-ban" />
+          <div class="font-semibold text-gray-500">Несовпавшие требования</div>
+        </div>
         <ul>
           <li v-for="item in unmatched" :key="item">{{ item }}</li>
-          <li v-if="!unmatched.length" class="list-empty">—</li>
+          <li v-if="!unmatched.length">—</li>
         </ul>
       </UCard>
     </div>

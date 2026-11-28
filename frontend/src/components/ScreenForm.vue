@@ -5,7 +5,6 @@ import { parseCandidate, readCandidateFile } from "../utils/candidate";
 
 const props = defineProps<{
   candidateJson: string;
-  fileName: string;
   loading: boolean;
 }>();
 
@@ -57,7 +56,7 @@ function submit() {
 </script>
 
 <template>
-  <UFormField @change.prevent="screen" @submit.prevent="submit">
+  <UForm @change="screen" @submit="submit">
     <UFileUpload
       v-model="file"
       accept=".json"
@@ -82,5 +81,5 @@ function submit() {
         }}</span>
       </UButton>
     </div>
-  </UFormField>
+  </UForm>
 </template>

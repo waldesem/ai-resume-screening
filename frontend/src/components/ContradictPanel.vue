@@ -97,7 +97,7 @@ function sourceLabel(source?: string): string {
         <div v-if="item.description">
           {{ item.description }}
         </div>
-      </Ucard>
+      </UCard>
     </div>
   </div>
 </template>

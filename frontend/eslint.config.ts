@@ -3,10 +3,12 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginVue from "eslint-plugin-vue";
 import { defineConfig } from "eslint/config";
+import nuxtUI from '@nuxt/ui/eslint'
 
 export default defineConfig([
   { files: ["**/*.{js,mjs,cjs,ts,mts,cts,vue}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
   tseslint.configs.recommended,
   { files: ["**/*.{js,mjs,cjs,ts,mts,cts,vue}"], extends: [pluginVue.configs["flat/essential"]] },
   { files: ["**/*.vue"], languageOptions: { parserOptions: { parser: tseslint.parser } } },
+  ...nuxtUI({ entryPoint: 'src/assets/main.css' })
 ]);
