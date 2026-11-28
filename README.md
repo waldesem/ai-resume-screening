@@ -1,4 +1,4 @@
-# AI Resume Screening (В РАЗРАБОТКЕ!!!)
+# AI Resume Screening
 
 Сервис проверки анкеты кандидата. На вход принимается **анкета в формате JSON**
 (схема заказчика), на выходе формируется структурированный отчёт:
@@ -286,11 +286,8 @@ frontend/
 └── vite.config.ts
 
 examples/
-└── candidate.json              # корректная анкета
+└── candidate.json                  # анкета
 ```
+## License
 
-## Screenshot
-
-![Screenshot](screenshots/screenshot-1.png)
-![Screenshot](screenshots/screenshot-2.png)
-![Screenshot](screenshots/screenshot-3.png)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

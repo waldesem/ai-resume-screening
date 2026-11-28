@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 def _as_text(value: Any) -> str:
@@ -56,7 +56,7 @@ class _BaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class PrevNameEntry(BaseModel):
+class PrevNameEntry(_BaseModel):
     """Запись о предыдущем имени."""
 
     surname: str | None = Field(default=None, alias="lastNameBeforeChange")
@@ -65,7 +65,9 @@ class PrevNameEntry(BaseModel):
     changed: str | None = Field(default=None)
     reason: str | None = None
 
-    @field_validator("surname", "firstname", "patronymic", mode="before")
+    @field_validator(
+        "surname", "firstname", "patronymic", "changed", "reason", mode="before"
+    )
     @classmethod
     def _validate_text(cls, value: Any) -> str:
         return _as_text(value)
@@ -104,7 +106,11 @@ class ExperienceEntry(_BaseModel):
     possibility_contact_employer: bool = Field(
         default=True, alias="possibilityContactEmployer"
     )
-    reason: str = Field(default="", alias="fireReason")
+    reason: str = Field(
+        default="",
+        alias="fireReason",
+        validation_alias=AliasChoices("fireReason", "reason", "dismissalReason"),
+    )
 
     @field_validator("current_job", "possibility_contact_employer", mode="before")
     @classmethod
@@ -112,7 +118,14 @@ class ExperienceEntry(_BaseModel):
         return _as_bool(value)
 
     @field_validator(
-        "begin_date", "name", "address", "activity_type", "position", mode="before"
+        "begin_date",
+        "end_date",
+        "name",
+        "address",
+        "activity_type",
+        "position",
+        "reason",
+        mode="before",
     )
     @classmethod
     def _validate_text(cls, value: Any) -> str:
@@ -120,11 +133,24 @@ class ExperienceEntry(_BaseModel):
 
 
 class OrganizationEntry(_BaseModel):
-    """Запись о организации."""
+    """Запись об организации, связанной с кандидатом."""
 
-    view: str = Field(alias="activity")
-    organization: str = Field(alias="name")
-    inn: str | None
+    view: str = Field(
+        default="",
+        alias="activity",
+        validation_alias=AliasChoices("activity", "activityType"),
+    )
+    organization: str = Field(
+        default="",
+        alias="name",
+        validation_alias=AliasChoices("name", "organization"),
+    )
+    inn: str | None = Field(default=None)
+
+    @field_validator("view", "organization", "inn", mode="before")
+    @classmethod
+    def _validate_text(cls, value: Any) -> str:
+        return _as_text(value)
 
 
 class CandidateProfile(_BaseModel):
@@ -160,7 +186,9 @@ class CandidateProfile(_BaseModel):
     has_job: bool = Field(default=False, alias="hasJob")
     no_job_reason: str = Field(default="", alias="noJobReason")
     experience: list[ExperienceEntry] = Field(default_factory=list)
-    name_was_changed: list[PrevNameEntry] = Field(default_factory=list)
+    name_was_changed: list[PrevNameEntry] = Field(
+        default_factory=list, alias="nameWasChanged"
+    )
     organizations: list[OrganizationEntry] = Field(default_factory=list)
 
     @field_validator(
@@ -184,6 +212,7 @@ class CandidateProfile(_BaseModel):
         "passport_number",
         "passport_issue_date",
         "passport_issued_by",
+        "no_job_reason",
         mode="before",
     )
     @classmethod
@@ -217,7 +246,7 @@ class CandidateProfile(_BaseModel):
 
     @property
     def full_name(self) -> str:
-        parts = [self.last_name, self.first_name]
+        parts = [self.last_name, self.first_name, self.mid_name]
         return " ".join(part for part in parts if part).strip()
 
 

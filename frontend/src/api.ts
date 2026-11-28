@@ -9,6 +9,39 @@ const HEALTH_TIMEOUT_MS = 5_000;
 
 export class ApiError extends Error {}
 
+async function readErrorMessage(response: Response): Promise<string> {
+  const raw = await response.text().catch(() => "");
+  const text = raw.trim();
+  if (!text) {
+    return `Backend вернул ошибку ${response.status}.`;
+  }
+
+  try {
+    const data = JSON.parse(text) as { detail?: unknown };
+    if (typeof data.detail === "string") {
+      return `Backend вернул ошибку ${response.status}: ${data.detail}`;
+    }
+    if (Array.isArray(data.detail)) {
+      const details = data.detail
+        .map((item) => {
+          const record = item as { loc?: unknown; msg?: unknown };
+          const loc = Array.isArray(record.loc) ? record.loc.join(".") : "";
+          return [loc, String(record.msg ?? "")].filter(Boolean).join(": ");
+        })
+        .filter(Boolean)
+        .join("; ");
+      if (details) {
+        return `Backend вернул ошибку ${response.status}: ${details}`;
+      }
+    }
+  } catch {
+    // Ответ не JSON — показываем безопасно обрезанный текст.
+  }
+
+  const short = text.length > 500 ? `${text.slice(0, 500)}…` : text;
+  return `Backend вернул ошибку ${response.status}: ${short}`;
+}
+
 export async function screenCandidate(
   candidate: unknown,
 ): Promise<ScreeningReport> {
@@ -23,16 +56,16 @@ export async function screenCandidate(
   try {
     const response = await fetch(`${API_BASE_URL}/screening/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      const details = await response.text().catch(() => "");
-      throw new ApiError(
-        `Backend вернул ошибку ${response.status}${details ? `: ${details}` : ""}`,
-      );
+      throw new ApiError(await readErrorMessage(response));
     }
 
     return (await response.json()) as ScreeningReport;

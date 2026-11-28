@@ -14,6 +14,7 @@ export interface ContradictionCounts {
 
 export interface ContradictionItem {
   severity?: Severity | string;
+  code?: string;
   title?: string;
   description?: string;
   fields?: string[];

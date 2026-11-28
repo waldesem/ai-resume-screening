@@ -12,7 +12,7 @@ const candidateJson = ref("");
 const loading = ref(false);
 const error = ref("");
 const success = ref("");
-const report = ref<ScreeningReport | null>();
+const report = ref<ScreeningReport | null>(null);
 const health = ref<"checking" | "online" | "offline">("checking");
 const reportAnchor = ref<HTMLElement | null>(null);
 
@@ -64,31 +64,39 @@ async function onSubmit(candidate: unknown): Promise<void> {
 
 <template>
   <UContainer>
-    <header class="flex items-center justify-between my-5">
-      <div class="text-xl font-bold">AI Resume Screening</div>
-      <UAvatar
-        :text="healthLabel"
+    <header class="flex items-center justify-between my-5 no-print">
+      <div class="flex items-center gap-2 text-primary">
+        <UIcon name="i-lucide-cpu-ai" size="32" />
+        <div class="text-xl font-bold text-error">Resume Screening</div>
+      </div>
+      <UButton
+        :title="healthLabel"
+        :aria-label="healthLabel"
         :icon="
           health == 'online'
-            ? 'i-lucide-wifi'
+            ? 'i-lucide-bot'
             : health == 'offline'
-              ? 'i-lucide-wifi-off'
-              : 'i-lucide-wifi-sync'
+              ? 'i-lucide-bot-off'
+              : 'i-lucide-rotate-cw-clock'
         "
+        :label="health"
         :color="
           health == 'online'
-            ? 'success'
+            ? 'info'
             : health == 'offline'
               ? 'error'
               : 'warning'
         "
+        variant="outline"
+        class="rounded-xl"
+        @click="refreshHealth"
       />
     </header>
     <UMain>
       <UCard
-        class="my-4"
         title="Проверка анкеты"
-        description="Загрузите JSON-анкету кандидата"
+        description="Загрузите JSON-файл анкеты или вставьте JSON текстом"
+        class="no-print"
       >
         <ScreenForm
           :candidate-json="candidateJson"
@@ -100,15 +108,25 @@ async function onSubmit(candidate: unknown): Promise<void> {
         />
       </UCard>
 
-      <UAlert v-if="error" :title="error" color="error" />
-      <UAlert v-if="success && !error" :title="success" color="success" />
+      <div aria-live="polite" class="no-print pb-3">
+        <UAlert v-if="error" :title="error" color="error" />
+        <UAlert v-if="success && !error" :title="success" color="success" />
+      </div>
 
-      <div ref="reportAnchor">
-      <ReportView v-if="report" :report="report" />
+      <UCard v-if="!report && !loading" class="my-4 text-center">
+        <UIcon name="i-lucide-file-search" class="mx-auto text-secondary" />
+        <p class="mt-2 font-semibold">Отчёт появится здесь</p>
+        <p class="text-sm text-secondary">
+          Загрузите JSON-анкету и нажмите «Проверить анкету».
+        </p>
+      </UCard>
+
+      <div ref="reportAnchor" class="scroll-mt-4">
+        <ReportView v-if="report" :report="report" />
       </div>
     </UMain>
 
-    <UFooter class="text-sm text-gray-600">
+    <UFooter class="text-sm text-secondary no-print">
       <template #left>
         <span>AI Resume Screening</span>
       </template>

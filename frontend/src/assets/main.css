@@ -8,5 +8,12 @@
 body {
   background:
     radial-gradient(circle at top left, #eef2ff 0, transparent 38%),
-    radial-gradient(circle at 85% 0, #f5f3ff 0, transparent 30%), var(--bg);
+    radial-gradient(circle at 85% 0, #f5f3ff 0, transparent 30%), #f4f6fb;
+}
+
+@media print {
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
 }

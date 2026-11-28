@@ -17,6 +17,10 @@ from app.tools.utils import (
     age_on,
     career_span_years,
     earliest_experience_start,
+    employment_gaps,
+    experience_periods,
+    last_employment_end,
+    months_between,
     parse_date,
 )
 
@@ -28,10 +32,23 @@ SEVERITY_LABELS = {
 }
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
+_BUSINESS_PATTERNS = (
+    r"\bип\b",
+    r"индивидуальн\w* предпринимател",
+    r"учредител",
+    r"владел",
+    r"собственник",
+    r"самозанят",
+    r"предпринимател",
+    r"\bfounder\b",
+    r"\bowner\b",
+    r"self[- ]employed",
+)
 
 
 def make_item(
     severity: str,
+    code: str,
     title: str,
     description: str,
     fields: list[str] | None = None,
@@ -42,6 +59,7 @@ def make_item(
         severity = "medium"
     return {
         "severity": severity,
+        "code": code,
         "title": title,
         "description": description,
         "fields": fields or [],
@@ -513,6 +531,7 @@ def _check_experience(
     for index, item in enumerate(experience):
         prefix = f"experience[{index}]"
         begin = parse_date(item.begin_date)
+        end = parse_date(item.end_date)
 
         if not item.name:
             items.append(
@@ -585,6 +604,54 @@ def _check_experience(
                         )
                     )
 
+        if item.end_date and end is None:
+            items.append(
+                make_item(
+                    "low",
+                    f"experience_{index}_end_date_invalid",
+                    "Дата окончания работы не распознана",
+                    f"Значение endDate={item.end_date!r} в записи "
+                    f"{prefix} не является датой.",
+                    [f"{prefix}.endDate"],
+                )
+            )
+        elif begin is not None and end is not None and end < begin:
+            items.append(
+                make_item(
+                    "high",
+                    f"experience_{index}_dates_reversed",
+                    "Даты периода работы противоречат друг другу",
+                    f"В записи {prefix} дата окончания "
+                    f"({end.isoformat()}) раньше даты начала "
+                    f"({begin.isoformat()}).",
+                    [f"{prefix}.beginDate", f"{prefix}.endDate"],
+                )
+            )
+
+        if item.current_job and item.end_date:
+            items.append(
+                make_item(
+                    "low",
+                    f"experience_{index}_current_with_end",
+                    "У текущего места работы указана дата окончания",
+                    f"В записи {prefix} currentJob=true, но endDate="
+                    f"{item.end_date!r} заполнена.",
+                    [f"{prefix}.currentJob", f"{prefix}.endDate"],
+                )
+            )
+
+    if not candidate.has_job and not candidate.no_job_reason:
+        items.append(
+            make_item(
+                "low",
+                "no_job_reason_missing",
+                "Не указана причина отсутствия работы",
+                "hasJob=false, но поле noJobReason пустое — причина "
+                "отсутствия текущего места работы не раскрыта.",
+                ["hasJob", "noJobReason"],
+            )
+        )
+
     start = earliest_experience_start(experience)
     if start is not None and age is not None:
         span = career_span_years(experience, today)
@@ -604,6 +671,208 @@ def _check_experience(
     return items
 
 
+def _is_business_text(value: str) -> bool:
+    """Ищет в тексте признаки собственного бизнеса или самозанятости."""
+    lowered = (value or "").lower()
+    return any(re.search(pattern, lowered) for pattern in _BUSINESS_PATTERNS)
+
+
+def _gap_explained_by_education(
+    candidate: CandidateProfile, begin: date, end: date
+) -> bool:
+    """Считает перерыв объяснённым, если он целиком попадает в годы обучения."""
+    for item in candidate.education:
+        if item.begin_year is None or item.end_year is None:
+            continue
+        if begin.year >= item.begin_year and end.year <= item.end_year:
+            return True
+    return False
+
+
+def _format_months(months: int) -> str:
+    """Короткое человекочитаемое представление длительности в месяцах."""
+    if months < 12:
+        return f"{months} мес."
+    years, rest = divmod(months, 12)
+    if rest:
+        return f"{years} г. {rest} мес."
+    return f"{years} г."
+
+
+def _check_employment_history(
+    candidate: CandidateProfile, today: date
+) -> list[dict[str, Any]]:
+    """Проверяет короткие периоды, перерывы, причины увольнения и бизнес."""
+    items: list[dict[str, Any]] = []
+    experience = candidate.experience
+    periods = experience_periods(experience, today)
+
+    short_periods = [item for item in periods if item["months"] < 6]
+    if short_periods:
+        severity = "high" if len(short_periods) >= 3 else "medium"
+        details = "; ".join(
+            f"{item['name'] or 'организация не указана'} "
+            f"({item['position'] or 'должность не указана'}) — "
+            f"{_format_months(item['months'])}"
+            for item in short_periods
+        )
+        items.append(
+            make_item(
+                severity,
+                "short_tenure",
+                "Короткие периоды работы",
+                f"Найдено мест работы короче 6 месяцев: "
+                f"{len(short_periods)}. {details}. Требуется уточнить причины "
+                "увольнения и характер работы (стажировка, проект, сезонная "
+                "занятость).",
+                ["experience"],
+            )
+        )
+
+    gaps = [
+        gap
+        for gap in employment_gaps(experience, today)
+        if gap["months"] >= 6
+        and not _gap_explained_by_education(candidate, gap["begin"], gap["end"])
+    ]
+    if gaps:
+        severity = "high" if any(gap["months"] >= 12 for gap in gaps) else "medium"
+        details = "; ".join(
+            f"{gap['begin'].isoformat()}–{gap['end'].isoformat()} "
+            f"({_format_months(gap['months'])})"
+            for gap in gaps
+        )
+        items.append(
+            make_item(
+                severity,
+                "employment_gap",
+                "Длительные перерывы в работе",
+                f"Найдено перерывов более 6 месяцев: {len(gaps)}. {details}. "
+                "Перерывы не объяснены обучением по данным анкеты.",
+                ["experience", "education"],
+            )
+        )
+
+    if not candidate.has_job:
+        last_end = last_employment_end(experience, today)
+        if last_end is not None and last_end < today:
+            months = months_between(last_end, today)
+            if months >= 6 and not _gap_explained_by_education(
+                candidate, last_end, today
+            ):
+                items.append(
+                    make_item(
+                        "high" if months >= 12 else "medium",
+                        "employment_gap_after_last_job",
+                        "Длительный перерыв после последнего места работы",
+                        f"После окончания последнего места работы "
+                        f"({last_end.isoformat()}) прошло "
+                        f"{_format_months(months)}, при этом hasJob=false.",
+                        ["experience", "hasJob", "noJobReason"],
+                    )
+                )
+
+    completed = [
+        (index, item)
+        for index, item in enumerate(experience)
+        if not item.current_job
+    ]
+    missing_reasons = [
+        (index, item) for index, item in completed if not item.reason.strip()
+    ]
+    if missing_reasons:
+        severity = "medium" if len(missing_reasons) >= 2 else "low"
+        details = "; ".join(
+            f"experience[{index}] — {item.name or 'организация не указана'}"
+            for index, item in missing_reasons
+        )
+        items.append(
+            make_item(
+                severity,
+                "dismissal_reason_missing",
+                "Не указаны причины увольнения",
+                f"Причина увольнения не заполнена для завершённых мест "
+                f"работы: {details}.",
+                [f"experience[{index}].reason" for index, _ in missing_reasons],
+            )
+        )
+
+    reasons = [
+        " ".join(item.reason.lower().split())
+        for _, item in completed
+        if item.reason.strip()
+    ]
+    repeated = sorted({reason for reason in reasons if reasons.count(reason) >= 2})
+    if repeated:
+        items.append(
+            make_item(
+                "low",
+                "dismissal_reason_repeated",
+                "Причины увольнения повторяются",
+                "Одинаковая причина увольнения указана для нескольких мест "
+                f"работы: {', '.join(repeated)}. Требуется уточнение реальных "
+                "причин ухода.",
+                ["experience"],
+            )
+        )
+
+    business_positions = [
+        (index, item)
+        for index, item in enumerate(experience)
+        if _is_business_text(item.position) or _is_business_text(item.name)
+    ]
+    if business_positions:
+        evidence = "; ".join(
+            f"experience[{index}] — {item.position or item.name}"
+            for index, item in business_positions
+        )
+        if candidate.organizations:
+            evidence += (
+                "; организации кандидата: "
+                + "; ".join(
+                    item.organization or "название не указано"
+                    for item in candidate.organizations
+                )
+            )
+        items.append(
+            make_item(
+                "medium",
+                "own_business",
+                "Признаки собственного бизнеса",
+                f"В опыте найдены признаки собственного бизнеса: {evidence}. "
+                "Требуется проверить конфликт интересов и совместительство.",
+                ["experience", "organizations"],
+            )
+        )
+
+    experience_names = {
+        " ".join(item.name.lower().split()) for item in experience if item.name
+    }
+    unmatched_organizations = [
+        item
+        for item in candidate.organizations
+        if item.organization
+        and " ".join(item.organization.lower().split()) not in experience_names
+    ]
+    if unmatched_organizations:
+        items.append(
+            make_item(
+                "low",
+                "organization_not_in_experience",
+                "Организации не отражены в опыте работы",
+                "В разделе organizations указаны организации, которых нет "
+                "среди мест работы: "
+                + "; ".join(
+                    item.organization for item in unmatched_organizations
+                )
+                + ". Требуется уточнить роль кандидата в этих организациях.",
+                ["organizations", "experience"],
+            )
+        )
+
+    return items
+
+
 def run_rule_checks(
     candidate: CandidateProfile, today: date | None = None
 ) -> list[dict[str, Any]]:
@@ -619,4 +888,5 @@ def run_rule_checks(
     items.extend(_check_passport(candidate, birth, today))
     items.extend(_check_education(candidate, birth, today))
     items.extend(_check_experience(candidate, birth, age, today))
+    items.extend(_check_employment_history(candidate, today))
     return items

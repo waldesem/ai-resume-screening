@@ -27,12 +27,17 @@ def _normalize_item(raw: Any, index: int) -> dict[str, Any] | None:
     if severity not in _ALLOWED_SEVERITIES:
         severity = "medium"
 
+    code = str(raw.get("code") or f"finding_{index}").strip()
+    if not code.startswith("llm_"):
+        code = f"llm_{code}"
+
     fields = raw.get("fields") or []
     if not isinstance(fields, list):
         fields = [str(fields)]
 
     return {
         "severity": severity,
+        "code": code,
         "title": title or "Смысловое противоречие",
         "description": description,
         "fields": [str(field) for field in fields if str(field).strip()],

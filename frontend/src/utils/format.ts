@@ -26,7 +26,7 @@ export function verdictLabel(verdict?: string | null): string {
 
 export function verdictClass(
   verdict?: string | null,
-): "success" | "warning" | "error" | "neutral" {
+): "success" | "warning" | "error" | "secondary" {
   switch (verdict) {
     case "suitable":
       return "success";
@@ -35,7 +35,7 @@ export function verdictClass(
     case "not_suitable":
       return "error";
     default:
-      return "neutral";
+      return "secondary";
   }
 }
 
@@ -48,14 +48,14 @@ export function severityLabel(severity?: string | null): string {
 
 export function severityClass(
   severity?: string | null,
-): "error" | "warning" | "neutral" {
+): "error" | "warning" | "secondary" {
   switch (severity) {
     case "high":
       return "error";
     case "medium":
       return "warning";
     default:
-      return "neutral";
+      return "secondary";
   }
 }
 
@@ -66,8 +66,12 @@ export function confidenceLabel(confidence?: string | null): string {
   return CONFIDENCE_LABELS[confidence] ?? confidence;
 }
 
+const YEARS_FORMATTER = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 1,
+});
+
 export function formatYears(value?: number | null): string {
-  if (value === null || value === undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return "—";
   }
 
@@ -86,5 +90,5 @@ export function formatYears(value?: number | null): string {
     suffix = "года";
   }
 
-  return `${value} ${suffix}`;
+  return `${YEARS_FORMATTER.format(value)} ${suffix}`;
 }

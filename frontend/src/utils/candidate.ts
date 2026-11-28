@@ -1,16 +1,16 @@
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export function parseCandidate(raw: string): unknown {
-  const text = raw.trim();
+  const text = raw.trim().replace(/^\uFEFF/, "");
   if (!text) {
-    throw new Error("Загрузите JSON-файл анкеты или вставьте JSON в поле.");
+    throw new Error("Загрузите/перенесите JSON-файл в область загрузки.");
   }
 
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch (error) {
-    throw new Error(`Некорректный JSON: ${(error as Error).message}`);
+    throw new Error(`Некорректный JSON: ${(error as Error).message}`, { cause: error });
   }
 
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
@@ -31,9 +31,22 @@ export async function readCandidateFile(file: File): Promise<string> {
   }
 
   const buffer = await file.arrayBuffer();
-  for (const encoding of ["utf-8", "windows-1251"]) {
+  const bytes = new Uint8Array(buffer);
+  const bomEncoding =
+    bytes[0] === 0xff && bytes[1] === 0xfe
+      ? "utf-16le"
+      : bytes[0] === 0xfe && bytes[1] === 0xff
+        ? "utf-16be"
+        : null;
+  const encodings = bomEncoding
+    ? [bomEncoding, "utf-8", "windows-1251"]
+    : ["utf-8", "windows-1251"];
+
+  for (const encoding of encodings) {
     try {
-      return new TextDecoder(encoding, { fatal: true }).decode(buffer);
+      return new TextDecoder(encoding, { fatal: true })
+        .decode(buffer)
+        .replace(/^\uFEFF/, "");
     } catch {
       // Пробуем следующую кодировку.
     }

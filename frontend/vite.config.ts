@@ -18,11 +18,26 @@ export default defineConfig(({ mode }) => {
         experimental: {
           componentDetection: true,
         },
+        router: false,
         ui: {
+          alert: {
+            defaultVariants: {
+              variant: "subtle",
+            },
+          },
+          badge: {
+            defaultVariants: {
+              variant: "subtle",
+            },
+          },
+          button: {
+            defaultVariants: {
+              variant: "outline",
+            },
+          },
           colors: {
             error: "red",
             info: "cyan",
-            neutral: "mist",
             secondary: "zinc",
             success: "emerald",
             primary: "blue",

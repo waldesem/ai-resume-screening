@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import { parseCandidate, readCandidateFile } from "../utils/candidate";
 
@@ -10,18 +10,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:candidate-json": [value: string];
-  "update:file-name": [value: string];
   submit: [candidate: unknown];
   error: [message: string];
   "clear-error": [];
 }>();
 
-const file = ref<File>();
+const file = ref<File | null>(null);
 
 const jsonStatus = computed(() => {
   const text = props.candidateJson.trim();
   if (!text) {
-    return { state: "neutral", label: "JSON не загружен" };
+    return { state: "secondary", label: "JSON не загружен" };
   }
   try {
     parseCandidate(text);
@@ -31,17 +30,22 @@ const jsonStatus = computed(() => {
   }
 });
 
-async function screen() {
-  if (file.value) {
-    try {
-      const text = await readCandidateFile(file.value);
-      emit("update:candidate-json", text);
-      emit("update:file-name", file.value.name);
-      emit("clear-error");
-    } catch (error) {
-      emit("error", (error as Error).message);
-    }
+watch(file, async (selected) => {
+  if (!selected) {
+    return;
   }
+  try {
+    const text = await readCandidateFile(selected);
+    emit("update:candidate-json", text);
+    emit("clear-error");
+  } catch (error) {
+    emit("error", (error as Error).message);
+  }
+});
+
+function updateJson(value: string | number): void {
+  emit("update:candidate-json", String(value));
+  emit("clear-error");
 }
 
 function submit() {
@@ -56,30 +60,50 @@ function submit() {
 </script>
 
 <template>
-  <UForm @change="screen" @submit="submit">
-    <UFileUpload
-      v-model="file"
-      accept=".json"
-      class="w-full"
-      label="Выберите/перенесите JSON-файл"
-      description="Поддерживаются UTF-8 и Windows-1251"
-    />
-    <div class="flex justify-between pt-4">
-      <UBadge :color="jsonStatus.state" variant="soft">
-        {{ jsonStatus.label }}
-      </UBadge>
-      <UButton
+  <UForm :state="{ candidateJson }" @submit="submit">
+    <div class="grid gap-4">
+      <UFileUpload
+        v-model="file"
+        accept=".json,application/json"
+        class="w-full"
+        label="Выберите/перенесите JSON-файл"
+        description="Поддерживаются UTF-8, UTF-16 и Windows-1251"
         :disabled="loading"
-        :loading="loading"
-        variant="outline"
-        type="submit"
-      >
-        <span>{{
-          loading
-            ? "Анализируем анкету… Это может занять несколько минут."
-            : "Проверить анкету"
-        }}</span>
-      </UButton>
+      />
+
+      <UFormField label="Или вставьте JSON анкеты">
+        <UTextarea
+          :model-value="candidateJson"
+          :rows="8"
+          :leading="loading"
+          variant="subtle"
+          class="w-full font-mono text-xs"
+          placeholder='{"positionName": "...", "experience": []}'
+          @update:model-value="updateJson"
+        />
+      </UFormField>
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <UBadge :color="jsonStatus.state">
+            {{ jsonStatus.label }}
+          </UBadge>
+          <span v-if="file" class="text-sm text-secondary">
+            {{ file.name }}
+          </span>
+        </div>
+        <UButton
+          :disabled="loading || !candidateJson.trim()"
+          :loading="loading"
+          type="submit"
+        >
+          {{
+            loading
+              ? "Анализируем анкету… Это может занять несколько минут."
+              : "Проверить анкету"
+          }}
+        </UButton>
+      </div>
     </div>
   </UForm>
 </template>

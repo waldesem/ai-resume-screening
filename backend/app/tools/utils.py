@@ -73,35 +73,153 @@ def earliest_experience_start(
     return min(valid) if valid else None
 
 
+def experience_periods(
+    experience: list[ExperienceEntry], today: date | None = None
+) -> list[dict[str, Any]]:
+    """Периоды работы с рассчитанной длительностью.
+
+    Для текущего места работы дата окончания — ``today``. Завершённые места
+    без ``endDate`` и с нераспознанными датами в расчёт не попадают: их
+    длительность достоверно определить нельзя.
+    """
+    today = today or date.today()
+    periods: list[dict[str, Any]] = []
+
+    for index, item in enumerate(experience):
+        start = parse_date(item.begin_date)
+        if start is None:
+            continue
+
+        if item.current_job:
+            end = today
+        else:
+            end = parse_date(item.end_date)
+            if end is None:
+                continue
+
+        if end < start:
+            continue
+
+        periods.append(
+            {
+                "index": index,
+                "name": item.name,
+                "position": item.position,
+                "begin": start,
+                "end": end,
+                "months": months_between(start, end),
+                "current": item.current_job,
+            }
+        )
+
+    return periods
+
+
+def _merge_intervals(
+    intervals: list[tuple[date, date]],
+) -> list[tuple[date, date]]:
+    """Объединяет пересекающиеся интервалы, чтобы не считать стаж дважды."""
+    if not intervals:
+        return []
+
+    ordered = sorted(intervals)
+    merged = [ordered[0]]
+    for start, end in ordered[1:]:
+        last_start, last_end = merged[-1]
+        if start <= last_end:
+            merged[-1] = (last_start, max(last_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def total_experience_months(
+    experience: list[ExperienceEntry], today: date | None = None
+) -> int:
+    """Суммарный стаж по периодам работы без учёта пересечений и перерывов."""
+    periods = experience_periods(experience, today)
+    intervals = _merge_intervals([(item["begin"], item["end"]) for item in periods])
+    return sum(months_between(start, end) for start, end in intervals)
+
+
 def career_span_years(
     experience: list[ExperienceEntry], today: date | None = None
 ) -> float:
-    """Стаж по датам: от самого раннего начала работы до сегодняшнего дня.
+    """Стаж по датам.
 
-    Схема анкеты не содержит дату окончания прошлых мест работы, поэтому
-    точную сумму периодов посчитать нельзя — используется общий интервал
-    карьеры как верхняя оценка стажа.
+    Если у всех прошлых мест работы указана дата окончания, суммируются
+    фактические периоды (пересечения не считаются дважды). Если хотя бы у
+    одного завершённого места ``endDate`` отсутствует, используется верхняя
+    оценка — интервал от самого раннего начала работы до сегодняшнего дня.
     """
     today = today or date.today()
+    periods = experience_periods(experience, today)
+    has_open_ended = any(
+        not item.current_job and not item.end_date for item in experience
+    )
+
+    if periods and not has_open_ended:
+        return round(total_experience_months(experience, today) / 12, 1)
+
     start = earliest_experience_start(experience)
     if start is None:
         return 0.0
     return round(months_between(start, today) / 12, 1)
 
 
+def employment_gaps(
+    experience: list[ExperienceEntry], today: date | None = None
+) -> list[dict[str, Any]]:
+    """Перерывы между периодами работы (от окончания до следующего начала)."""
+    periods = experience_periods(experience, today)
+    if len(periods) < 2:
+        return []
+
+    ordered = sorted(periods, key=lambda item: item["begin"])
+    gaps: list[dict[str, Any]] = []
+    previous = ordered[0]
+    previous_end = previous["end"]
+
+    for period in ordered[1:]:
+        if period["begin"] > previous_end:
+            months = months_between(previous_end, period["begin"])
+            if months > 0:
+                gaps.append(
+                    {
+                        "begin": previous_end,
+                        "end": period["begin"],
+                        "months": months,
+                        "after": previous,
+                        "before": period,
+                    }
+                )
+        if period["end"] > previous_end:
+            previous = period
+            previous_end = period["end"]
+
+    return gaps
+
+
+def last_employment_end(
+    experience: list[ExperienceEntry], today: date | None = None
+) -> date | None:
+    """Дата последнего известного окончания работы или ``today`` для текущей."""
+    today = today or date.today()
+    periods = experience_periods(experience, today)
+    if not periods:
+        return None
+    if any(item["current"] for item in periods):
+        return today
+    return max(item["end"] for item in periods)
+
+
 def current_job_years(
     experience: list[ExperienceEntry], today: date | None = None
 ) -> float:
-    """Суммарная длительность текущих мест работы (по датам начала)."""
-    today = today or date.today()
-    total_months = 0
-    for item in experience:
-        if not item.current_job:
-            continue
-        start = parse_date(item.begin_date)
-        if start is None:
-            continue
-        total_months += months_between(start, today)
+    """Суммарная длительность текущих мест работы."""
+    total_months = sum(
+        item["months"] for item in experience_periods(experience, today) if item["current"]
+    )
     return round(total_months / 12, 1)
 
 

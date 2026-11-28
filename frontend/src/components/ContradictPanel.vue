@@ -10,6 +10,19 @@ const counts = computed(
   () => props.contradictions.counts ?? { high: 0, medium: 0, low: 0 },
 );
 const items = computed(() => props.contradictions.items ?? []);
+const hasFindings = computed(
+  () =>
+    items.value.length > 0 ||
+    (counts.value.high ?? 0) +
+      (counts.value.medium ?? 0) +
+      (counts.value.low ?? 0) >
+      0,
+);
+const severityCards = computed(() => [
+  { label: "Критичные", value: counts.value.high ?? 0, color: "error" },
+  { label: "Средние", value: counts.value.medium ?? 0, color: "warning" },
+  { label: "Незначительные", value: counts.value.low ?? 0, color: "secondary" },
+]);
 
 function sourceLabel(source?: string): string {
   return source === "llm" ? "LLM" : "правило";
@@ -17,64 +30,40 @@ function sourceLabel(source?: string): string {
 </script>
 
 <template>
-  <div class="grid grid-row gap-3 pt-2">
+  <div class="grid gap-3 pt-2">
     <div class="inline-block font-semibold text-lg">
-      <span class="bg-gray-100 px-2 rounded-lg">1</span>
+      <span class="bg-elevated px-2 rounded-lg">1</span>
       Внутренние противоречия
     </div>
 
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <UAlert
-        v-for="(data, idx) in [
-          {
-            label: 'Критичные',
-            value: counts.high ?? 0,
-            bg: 'bg-red-100',
-            text: 'text-red-800',
-          },
-          {
-            label: 'Средние',
-            value: counts.medium ?? 0,
-            bg: 'bg-orange-100',
-            text: 'text-orange-800',
-          },
-          {
-            label: 'Незначительные',
-            value: counts.low ?? 0,
-            bg: 'bg-yellow-100',
-            text: 'text-yellow-800',
-          },
-        ]"
-        :key="idx"
-        :ui="{ root: data.bg, title: data.text, description: data.text }"
-        variant="subtle"
-        :description="data.value.toString()"
-        :title="data.label"
+        v-for="card in severityCards"
+        :key="card.label"
+        :color="card.color"
+        :description="card.value.toString()"
+        :title="card.label"
       />
     </div>
 
     <UAlert
       v-if="contradictions.summary"
       :title="contradictions.summary"
-      :ui="{ root: 'bg-blue-100', title: 'text-blue-800' }"
+      color="primary"
     />
 
     <UAlert
-      v-if="!items.length"
+      v-if="!hasFindings"
       icon="i-lucide-check-check"
       title="Формальных и смысловых противоречий не найдено."
-      :ui="{
-        root: 'bg-green-100',
-        title: 'text-green-800',
-        icon: 'text-green-800',
-      }"
+      color="success"
     />
 
     <div v-else>
       <UCard
         v-for="(item, index) in items"
-        :key="index"
-        :ui="{header: 'border-none'}"
+        :key="`${item.code ?? 'item'}-${index}`"
+        :ui="{ header: 'border-none' }"
       >
         <template #header>
           <div class="flex justify-between">
@@ -96,6 +85,12 @@ function sourceLabel(source?: string): string {
 
         <div v-if="item.description">
           {{ item.description }}
+        </div>
+        <div
+          v-if="item.fields?.length"
+          class="mt-2 text-xs text-secondary"
+        >
+          Поля: {{ item.fields.join(", ") }}
         </div>
       </UCard>
     </div>
